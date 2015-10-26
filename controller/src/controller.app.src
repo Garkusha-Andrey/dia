@@ -2,10 +2,12 @@
  [
   {description, "Controller of diameter instances"},
   {vsn, "0.0.1"},
+  {modules, [routing,flows,restconf,dia_stubs]},
   {registered, []},
   {applications, [
                   kernel,
-                  stdlib
+                  stdlib,
+		  inets
                  ]},
   {mod, { controller_app, []}},
   {env, []}
