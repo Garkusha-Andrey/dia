@@ -40,6 +40,9 @@ main_loop(Instances, FreeChunks, Iteration) ->
     {Instances5, FreeChunks3} = give_chunks(Instances4, FreeChunks2),
     io:format("chunks given: ~w~n~w~n", [Instances5, FreeChunks3]),
 
+    %% there may be free chunks only if there are no instances
+    %%true == length(Instances5) > 0 xor length(FreeChunks3) > 0,
+
     %% make and send exception flows
     lists:foreach(fun(Connection) ->
                           restconf:flow_send(
@@ -79,14 +82,8 @@ main_loop(Instances, FreeChunks, Iteration) ->
 					       gateway))
 		  end, FreeChunks3),
 
-    %% 2 iterations are enough for the test
-    case Iteration of
-        2 ->
-            Instances5;
-        _ ->
-            timer:sleep(1000),
-            main_loop(Instances5, FreeChunks3, Iteration+1)
-    end.
+    timer:sleep(1000),
+    main_loop(Instances5, FreeChunks3, Iteration+1).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
@@ -284,8 +281,10 @@ extra_share(OldInstanceList, ?NUM_CHUNKS, NewInstanceList) ->
 
 %% remaining weights are 0 - done
 extra_share([Instance= #instanceChunks{}|OldInstanceList],
-	    _SharedChunks, NewInstanceList)
+	    SharedChunks, NewInstanceList)
   when Instance#instanceChunks.weight == 0 ->
+    %% no chunks could have been shared
+    0 = SharedChunks,
     NewInstanceList ++ [Instance|OldInstanceList];
 
 %% add 1 chunk to instance
@@ -339,8 +338,8 @@ int_take_chunks([], FreeChunks, NewInstanceList) ->
 %% @func give_chunks/2
 %% @description
 %%     for all the instances in the InstanceList:
-%%      take the excess chunks to the FreeChunks list;
-%%      update chunks, chunks_n, chunks_diff
+%%      take chunks from the FreeChunks list
+%%      according to chunks_diff
 %%
 give_chunks(InstanceList, FreeChunks) ->
     int_give_chunks(InstanceList, FreeChunks, []).
@@ -368,7 +367,7 @@ int_give_chunks([Instance = #instanceChunks{}|OldInstanceList],
     int_give_chunks(OldInstanceList,
 		    NewFreeChunks, [NewInstance|NewInstanceList]);
 
-%% instance does not need more chunks
+%% instance does not need any more chunks
 int_give_chunks([Instance|OldInstanceList], FreeChunks, NewInstanceList) ->
     int_give_chunks(OldInstanceList, FreeChunks, [Instance|NewInstanceList]);
 

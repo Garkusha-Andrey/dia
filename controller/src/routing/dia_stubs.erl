@@ -11,31 +11,31 @@ instance_weights_get() ->
 
 instance_weights_get(Iteration) ->
 
-        case Iteration == 1 of
-                true ->
-
-%% Case 1: 3 even instances with 8/3 = 2,66 chunks each
-%%                [#instanceWeight{id=1, weight=95},
-%%                 #instanceWeight{id=2, weight=100},
-%%                 #instanceWeight{id=3, weight=100}];
-
-%% Case 2: 6 even instances with 8/6 = 1,33 chunks each
+        case Iteration of
+	    1 ->
+%% empty instance list with no previous instances
+	        [];
+	    2 ->
+%% 3 even instances with 8/3 = 2,66 chunks each
+                [#instanceWeight{id=1, weight=95},
+                 #instanceWeight{id=2, weight=100},
+                 #instanceWeight{id=3, weight=100}];
+	    3 ->
+%% empty instance list with previous instances
+		[];
+	    4 ->
+%% 6 even instances with 8/6 = 1,33 chunks each
                 [#instanceWeight{id=1, weight=100},
                  #instanceWeight{id=2, weight=95},
                  #instanceWeight{id=3, weight=100},
                  #instanceWeight{id=4, weight=100},
                  #instanceWeight{id=5, weight=100},
                  #instanceWeight{id=6, weight=100}];
-
-%% Case 3: empty instance list
-%%	        [];
-        false ->
-%% Empty instance list
-%%		[]
-%% Normal weights
-		[%%#instanceWeight{id=1, weight=50},
-                 #instanceWeight{id=2, weight=80},
-                 #instanceWeight{id=3, weight=20}]
+	    5 ->
+		[#instanceWeight{id=2, weight=80},
+                 #instanceWeight{id=3, weight=20}];
+	    _ ->
+		  exit(ok)
      end.
 
 connections_get() ->
