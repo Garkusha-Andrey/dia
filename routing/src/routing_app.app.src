@@ -1,6 +1,6 @@
-{application, controller,
+{application, routing_app,
  [
-  {description, "Controller of diameter instances"},
+  {description, "Routing controller of diameter instances"},
   {vsn, "0.0.1"},
   {modules, [routing,flows,restconf,dia_stubs]},
   {registered, []},
@@ -9,6 +9,6 @@
                   stdlib,
 		  inets
                  ]},
-  {mod, { controller_app, []}},
+  {mod, { routing_app, []}},
   {env, []}
  ]}.
