@@ -2,7 +2,7 @@
  [
   {description, "Routing controller of diameter instances"},
   {vsn, "0.0.1"},
-  {modules, [routing,flows,restconf,dia_stubs]},
+  {modules, [routing_app,routing_sup,routing,flows,restconf,dia_stubs]},
   {registered, []},
   {applications, [
                   kernel,

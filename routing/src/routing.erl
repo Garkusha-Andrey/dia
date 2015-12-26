@@ -36,9 +36,9 @@ main_loop(Instances, FreeChunks, Iteration) ->
     Instances4 = lists:filter(fun(Instance) ->
 				      Instance#instanceChunks.weight /= 0
 			      end, Instances3),
-    io:format("chunks taken: ~w~n~w~n", [Instances4, FreeChunks2]),
+    io:format("chunks taken; ~w~nFree: ~w~n", [Instances4, FreeChunks2]),
     {Instances5, FreeChunks3} = give_chunks(Instances4, FreeChunks2),
-    io:format("chunks given: ~w~n~w~n", [Instances5, FreeChunks3]),
+    io:format("chunks given; ~w~nFree: ~w~n", [Instances5, FreeChunks3]),
 
     %% there may be free chunks only if there are no instances
     %%true == length(Instances5) > 0 xor length(FreeChunks3) > 0,
@@ -63,8 +63,7 @@ main_loop(Instances, FreeChunks, Iteration) ->
                                                 integer_to_list(Chunk),
                                               "0.0.0." ++
                                                 integer_to_list(?NUM_CHUNKS-1),
-                                              Instance#instanceChunks.id,
-                                              gateway))
+                       dia_stubs:get_instance_mac(Instance#instanceChunks.id)))
                                   end, Instance#instanceChunks.chunks)
                   end, Instances5),
 
@@ -78,8 +77,7 @@ main_loop(Instances, FreeChunks, Iteration) ->
 					         integer_to_list(FreeChunk),
 					       "0.0.0." ++
                                                  integer_to_list(?NUM_CHUNKS-1),
-					       drop,
-					       gateway))
+					       drop))
 		  end, FreeChunks3),
 
     timer:sleep(1000),
@@ -130,8 +128,7 @@ exception_for_connection(Connection, Instances) ->
             flows:make(exception,
 		       Connection#diaConfig.remotePeerIp,
 		       ?FULL_MASK,
-		       Connection#diaConfig.diaInstanceId,
-		       gateway)
+	      dia_stubs:get_instance_mac(Connection#diaConfig.diaInstanceId))
     end.
 
 

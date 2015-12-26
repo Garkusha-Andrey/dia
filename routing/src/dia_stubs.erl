@@ -2,7 +2,8 @@
 
 -export([instance_weights_get/0,
 	 instance_weights_get/1,
-	 connections_get/0]).
+	 connections_get/0,
+	 get_instance_mac/1]).
 
 -include("dia_stubs.hrl").
 
@@ -49,3 +50,7 @@ connections_get() ->
                 remotePeerIp="10.0.0.6",
                 diaInstanceId=1}
      ].
+
+get_instance_mac(InstanceId) ->
+    lists:flatten(lists:duplicate(5,integer_to_list(InstanceId) ++ ":"))
+	++ integer_to_list(InstanceId).

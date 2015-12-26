@@ -1,6 +1,6 @@
 -module(flows).
 
--export([make/5]).
+-export([make/4]).
 
 -define(FLOW_BASIC_PRIO, 5).
 -define(FLOW_EX_PRIO, 10).
@@ -16,7 +16,7 @@ get_flow_id(exception, Ip) ->
     %% TODO implement properly
     100 + get_flow_id(basic, Ip).
 
-make(Type, Ip, Mask, InstanceId, Gateway) ->
+make(Type, Ip, Mask, Gateway) ->
 
     case Type of
         exception ->
@@ -29,8 +29,31 @@ make(Type, Ip, Mask, InstanceId, Gateway) ->
 
     FlowId = get_flow_id(Type, Ip),
 
-    io:format("making flow id(~w) prio(~w) name(~s) ip(~s/~s) instance(~w) gw(~w)~n",
-              [FlowId, Prio, Name, Ip, Mask, InstanceId, Gateway]),
+    io:format("making flow id(~w) prio(~w) name(~s) ip(~s/~s) sendto(~s)~n",
+              [FlowId, Prio, Name, Ip, Mask, Gateway]),
+
+    case Gateway of
+	drop ->
+	    Instructions = "
+    <instructions>
+        <instruction>
+            <order>0</order>
+        </instruction>
+    </instructions>";
+
+	_ ->
+	    Instructions = "
+    <instructions>
+        <instruction>
+            <order>0</order>
+            <dst_mac>" ++ Gateway ++ "</dst_mac>
+        </instruction>
+        <instruction>
+            <order>1</order>
+            <output>1</output>
+        </instruction>
+    </instructions>"
+    end,
 
     {FlowId,
 "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>
@@ -46,11 +69,7 @@ make(Type, Ip, Mask, InstanceId, Gateway) ->
         <ipv4-destination>" ++ Ip ++ "/" ++ Mask ++ "</ipv4-destination>
     </match>
     <id>" ++ integer_to_list(FlowId) ++"</id>
-    <table_id>0</table_id>
-    <instructions>
-        <instruction>
-            <order>0</order>
-        </instruction>
-    </instructions>
+    <table_id>0</table_id>"
+++ Instructions ++ "
 </flow>
 "}.
