@@ -1,8 +1,8 @@
 -module(routing).
 
--export([start/2, start/0, stop/1]).
+-export([init/0, update/0]).
 
--include("dia_stubs.hrl").
+-include("stubs/dia_stubs.hrl").
 
 -record(instanceChunks, {id,
                          weight,
@@ -13,19 +13,26 @@
 -define(NUM_CHUNKS, 8).
 -define(FULL_MASK, "255.255.255.255").
 
-start(_StartType, _StartArgs) ->
-    start().
-start()->
+init()->
+    %% TODO
     restconf:table_delete(0),
-    main_loop([], lists:seq(0, ?NUM_CHUNKS-1), 1).
+    dia_stubs:get_switch_ip(),
+    dia_stubs:get_switch_mac(),
+    dia_stubs:get_public_ip(),
 
-stop(_State) ->
+    ets:new(table, [set, named_table]),
+    ets:insert(table, {instances, []}),
+    ets:insert(table, {freeChunks, lists:seq(0, ?NUM_CHUNKS-1)}),
     ok.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+update()->
 
-main_loop(Instances, FreeChunks, Iteration) ->
-    Weights = dia_stubs:instance_weights_get(Iteration),
+    %% LOAD
+    [{instances, Instances}] = ets:lookup(table, instances),
+    [{freeChunks, FreeChunks}] = ets:lookup(table, freeChunks),
+
+
+    Weights = dia_stubs:instance_weights_get(1),
 
     %% set the new weights
     Instances1 = update_weights(Instances, Weights),
@@ -80,8 +87,10 @@ main_loop(Instances, FreeChunks, Iteration) ->
 					       drop))
 		  end, FreeChunks3),
 
-    timer:sleep(1000),
-    main_loop(Instances5, FreeChunks3, Iteration+1).
+    %% SAVE
+    ets:insert(table, {instances, Instances5}),
+    ets:insert(table, {freeChunks, FreeChunks3}),
+    ok.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
