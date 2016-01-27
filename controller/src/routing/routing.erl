@@ -1,6 +1,8 @@
 -module(routing).
 
--export([init/0, update/0]).
+-export([init/0, update/0,
+	%% for test
+	 test_update/1]).
 
 -include("stubs/dia_stubs.hrl").
 
@@ -22,17 +24,20 @@ init()->
 
     ets:new(table, [set, named_table]),
     ets:insert(table, {instances, []}),
-    ets:insert(table, {freeChunks, lists:seq(0, ?NUM_CHUNKS-1)}),
+    ets:insert(table, {freeChunks,
+		       [{X,0} || X <- lists:seq(0, ?NUM_CHUNKS-1)]}),
     ok.
 
 update()->
+    test_update(2).
+test_update(Iteration)->
 
     %% LOAD
     [{instances, Instances}] = ets:lookup(table, instances),
     [{freeChunks, FreeChunks}] = ets:lookup(table, freeChunks),
 
 
-    Weights = dia_stubs:instance_weights_get(1),
+    Weights = dia_stubs:instance_weights_get(Iteration),
 
     %% set the new weights
     Instances1 = update_weights(Instances, Weights),
@@ -67,7 +72,8 @@ update()->
                                               %% TODO3 add support for
                                               %%       arbitrary chunk number
                                               "0.0.0." ++
-                                                integer_to_list(Chunk),
+                                                integer_to_list(
+						  element(1,Chunk)),
                                               "0.0.0." ++
                                                 integer_to_list(?NUM_CHUNKS-1),
                        dia_stubs:get_instance_mac(Instance#instanceChunks.id)))
@@ -81,7 +87,8 @@ update()->
 					       %% TODO3 add support for
 					       %%       arbitrary chunk number
 					       "0.0.0." ++
-					         integer_to_list(FreeChunk),
+					         integer_to_list(
+						   element(1,FreeChunk)),
 					       "0.0.0." ++
                                                  integer_to_list(?NUM_CHUNKS-1),
 					       drop))
@@ -89,8 +96,17 @@ update()->
 
     %% SAVE
     ets:insert(table, {instances, Instances5}),
-    ets:insert(table, {freeChunks, FreeChunks3}),
+    ets:insert(table, {freeChunks, reset_chunks_owner(FreeChunks3)}),
     ok.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%% AUX functions
+%%
+set_chunks_owner(Chunks, Owner) ->
+    [{X,Owner} || {X,_} <- Chunks].
+reset_chunks_owner(Chunks) ->
+    set_chunks_owner(Chunks, 0).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
@@ -322,6 +338,9 @@ int_take_chunks([Instance= #instanceChunks{}|OldInstanceList],
 				-Instance#instanceChunks.chunks_diff,
 				Instance#instanceChunks.chunks),
 
+    Chunks_excess2 =
+	set_chunks_owner(Chunks_excess, Instance#instanceChunks.id),
+
     UpdatedInstance = #instanceChunks{id=Instance#instanceChunks.id,
 				      weight=Instance#instanceChunks.weight,
 				      chunks=Chunks,
@@ -329,7 +348,8 @@ int_take_chunks([Instance= #instanceChunks{}|OldInstanceList],
 				      chunks_diff=Instance#instanceChunks.chunks_diff},
 
    int_take_chunks(OldInstanceList,
-                FreeChunks ++ Chunks_excess, [UpdatedInstance|NewInstanceList]);
+		   FreeChunks ++ Chunks_excess2,
+		   [UpdatedInstance|NewInstanceList]);
 
 %% instance has no excess chunks
 int_take_chunks([Instance|OldInstanceList], FreeChunks, NewInstanceList) ->
@@ -360,8 +380,10 @@ int_give_chunks([Instance = #instanceChunks{}|OldInstanceList],
                                    FreeChunks),
 
     FMoveChunk = fun(Chunk) ->
-        io:format("give_chunks(): chunk(~w) - instance [?]-->[~w]~n",
-                  [Chunk, Instance#instanceChunks.id]) end,
+        io:format("give_chunks(): chunk(~w) - instance [~w]-->[~w]~n",
+                  [element(1,Chunk), element(2, Chunk),
+		   Instance#instanceChunks.id])
+		 end,
 
     lists:foreach(FMoveChunk, NewChunks),
 

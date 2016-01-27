@@ -2,3 +2,4 @@
 *.beam
 .rebar/
 .eunit/
+erl_crash.dump
