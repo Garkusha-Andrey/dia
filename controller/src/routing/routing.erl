@@ -16,16 +16,26 @@
 -define(FULL_MASK, "255.255.255.255").
 
 init()->
-    %% TODO
-    restconf:table_delete(0),
-    dia_stubs:get_switch_ip(),
-    dia_stubs:get_switch_mac(),
-    dia_stubs:get_public_ip(),
-
     ets:new(table, [set, named_table]),
     ets:insert(table, {instances, []}),
     ets:insert(table, {freeChunks,
 		       [{X,0} || X <- lists:seq(0, ?NUM_CHUNKS-1)]}),
+
+    restconf:table_delete(0),
+
+    {IpInt, MaskInt} = dia_stubs:get_switch_ip(),
+    {IpExt, MaskExt} = dia_stubs:get_public_ip(),
+
+    lists:foreach(fun(A) -> restconf:flow_send(A) end,
+		  flows:defaults(arp,
+				[IpInt,MaskInt,
+				 IpExt,MaskExt])),
+
+    lists:foreach(fun(A) -> restconf:flow_send(A) end,
+		  flows:defaults(ip,
+				[IpInt,IpExt,
+				 dia_stubs:get_switch_mac(),
+				 dia_stubs:get_gateway_mac()])),
     ok.
 
 update()->

@@ -6,11 +6,13 @@
 -define(CONTROLLER_ADDR, "127.0.0.1:8080").
 
 
-make_flow_url(FlowId) ->
-    "http://" ++ ?CONTROLLER_ADDR ++ "/restconf/config/opendaylight-inventory:nodes/node/openflow:1/table/0/flow/" ++ integer_to_list(FlowId).
+make_flow_url(TableId, FlowId) ->
+    make_table_url(TableId) ++ "/flow/" ++ integer_to_list(FlowId).
 
 make_table_url(TableId) ->
-    "http://" ++ ?CONTROLLER_ADDR ++ "/restconf/config/opendaylight-inventory:nodes/node/openflow:1/table/" ++ integer_to_list(TableId).
+    "http://" ++ ?CONTROLLER_ADDR ++
+    "/restconf/config/opendaylight-inventory:nodes/node/openflow:1/table/"
+    ++ integer_to_list(TableId).
 
 auth_header(User, Pass) ->
     Encoded = base64:encode_to_string(lists:append([User,":",Pass])),
@@ -47,8 +49,10 @@ put_method(URL, ContentType, Body) -> request(put,
 flow_send(noflow) ->
     ok;
 flow_send({FlowId, Flow}) ->
+    flow_send({0, FlowId, Flow});
+flow_send({TableId, FlowId, Flow}) ->
     %%io:format("Sending:~n~s~n~s~n",[make_flow_url(FlowId), Flow]),
-    put_method(make_flow_url(FlowId), "application/xml", Flow).
+    put_method(make_flow_url(TableId, FlowId), "application/xml", Flow).
 
 table_delete(TableId) ->
     request(delete, {make_table_url(TableId), [auth_header("admin", "admin")],

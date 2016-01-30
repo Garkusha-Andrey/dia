@@ -6,6 +6,7 @@
 	 get_instance_mac/1,
 	 get_switch_ip/0,
 	 get_switch_mac/0,
+	 get_gateway_mac/0,
 	 get_public_ip/0]).
 
 -include("dia_stubs.hrl").
@@ -58,8 +59,10 @@ get_instance_mac(InstanceId) ->
     lists:flatten(lists:duplicate(5,integer_to_list(InstanceId) ++ ":"))
 	++ integer_to_list(InstanceId).
 get_switch_ip()->
-    "10.0.0.5/24".
+    {"10.0.0.5","24"}.
 get_switch_mac()->
     "01:02:03:04:05:06".
+get_gateway_mac()->
+    "0a:0b:0c:0d:0e:0f".
 get_public_ip()->
-    "192.168.203.203/23".
+    {"192.168.203.203","23"}.
