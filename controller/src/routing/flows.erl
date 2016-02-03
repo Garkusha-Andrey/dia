@@ -14,7 +14,7 @@
 get_flow_id(basic, Ip) ->
     %% TODO3 add support for arbitrary chunk number
     {ok, {_,_,_,Id}} = inet:parse_ipv4_address(Ip),
-    Id;
+    10 + Id;
 get_flow_id(exception, Ip) ->
     %% TODO implement properly
     100 + get_flow_id(basic, Ip).
@@ -49,11 +49,20 @@ make(Type, Ip, Mask, Gateway) ->
     <instructions>
         <instruction>
             <order>0</order>
-            <dst_mac>" ++ Gateway ++ "</dst_mac>
-        </instruction>
-        <instruction>
-            <order>1</order>
-            <output>1</output>
+            <apply-actions>
+                <action>
+                    <order>0</order>
+                    <set-dl-dst-action>" ++ Gateway ++ "</set-dl-dst-action>
+                </action>
+                <action>
+                    <order>1</order>
+                    <output-action>
+                        <output-node-connector>"
+                            ++ integer_to_list(?PORT_INTERNAL) ++
+                        "</output-node-connector>
+                    </output-action>
+                </action>
+            </apply-actions>
         </instruction>
     </instructions>"
     end,
@@ -78,13 +87,13 @@ make(Type, Ip, Mask, Gateway) ->
 "}.
 
 
-defaults(arp, [_IpInternal,_MaskInternal,
-	       _IpExternal,_MaskExternal]) ->
+defaults(arp, [IpInternal,MaskInternal,
+	       IpExternal,MaskExternal]) ->
 [{1,
 "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>
 <flow xmlns=\"urn:opendaylight:flow:inventory\">
     <priority>40002</priority>
-    <flow-name>arp-req</flow-name>
+    <flow-name>arp2bplane</flow-name>
     <match>
         <ethernet-match>
             <ethernet-type>
@@ -92,21 +101,25 @@ defaults(arp, [_IpInternal,_MaskInternal,
             </ethernet-type>
         </ethernet-match>
         <in-port>LOCAL</in-port>
-"
-%%        <nw-destination>"
-%%            ++ IpInternal ++ "/" ++ MaskInternal ++
-%%        "</nw-destination>
-"
+        <arp-target-transport-address>"
+        ++ IpInternal ++ "/" ++ MaskInternal ++
+       "</arp-target-transport-address>
     </match>
+    <id>1</id>
     <table_id>0</table_id>
     <instructions>
         <instruction>
             <order>0</order>
-            <output>" ++ integer_to_list(?PORT_INTERNAL) ++ "</output>
-        </instruction>
-        <instruction>
-            <order>1</order>
-            <output>" ++ integer_to_list(?PORT_EXTERNAL) ++ "</output>
+            <apply-actions>
+                <action>
+                    <order>0</order>
+                    <output-action>
+                        <output-node-connector>"
+                            ++ integer_to_list(?PORT_INTERNAL) ++
+                       "</output-node-connector>
+                    </output-action>
+                </action>
+            </apply-actions>
         </instruction>
     </instructions>
 </flow>
@@ -114,8 +127,43 @@ defaults(arp, [_IpInternal,_MaskInternal,
 {2,
 "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>
 <flow xmlns=\"urn:opendaylight:flow:inventory\">
+    <priority>40002</priority>
+    <flow-name>arp2ext</flow-name>
+    <match>
+        <ethernet-match>
+            <ethernet-type>
+                <type>2054</type>
+            </ethernet-type>
+        </ethernet-match>
+        <in-port>LOCAL</in-port>
+        <arp-target-transport-address>"
+        ++ IpExternal ++ "/" ++ MaskExternal ++
+       "</arp-target-transport-address>
+    </match>
+    <id>2</id>
+    <table_id>0</table_id>
+    <instructions>
+        <instruction>
+            <order>0</order>
+            <apply-actions>
+                <action>
+                    <order>0</order>
+                    <output-action>
+                        <output-node-connector>"
+                            ++ integer_to_list(?PORT_EXTERNAL) ++
+                       "</output-node-connector>
+                    </output-action>
+                </action>
+            </apply-actions>
+        </instruction>
+    </instructions>
+</flow>
+"},
+{3,
+"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>
+<flow xmlns=\"urn:opendaylight:flow:inventory\">
     <priority>40001</priority>
-    <flow-name>arp-reply</flow-name>
+    <flow-name>arp2ovs</flow-name>
     <match>
         <ethernet-match>
             <ethernet-type>
@@ -123,11 +171,21 @@ defaults(arp, [_IpInternal,_MaskInternal,
             </ethernet-type>
         </ethernet-match>
     </match>
+    <id>3</id>
     <table_id>0</table_id>
     <instructions>
         <instruction>
             <order>0</order>
-            <output>LOCAL</output>
+            <apply-actions>
+                <action>
+                    <order>0</order>
+                    <output-action>
+                        <output-node-connector>
+                            LOCAL
+                        </output-node-connector>
+                    </output-action>
+                </action>
+            </apply-actions>
         </instruction>
     </instructions>
 </flow>
@@ -137,8 +195,8 @@ defaults(ip,
 	 [IpInternal,IpExternal,MacSwitch,MacGateway])
 ->
 [
-{3,"
-<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>
+{4,
+"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>
 <flow xmlns=\"urn:opendaylight:flow:inventory\">
     <priority>50</priority>
     <flow-name>ip2bplane</flow-name>
@@ -150,16 +208,27 @@ defaults(ip,
         </ethernet-match>
         <ipv4-source>" ++ IpInternal ++ "/255.255.255.255</ipv4-source>
     </match>
+    <id>4</id>
     <table_id>0</table_id>
     <instructions>
         <instruction>
             <order>0</order>
-            <output>" ++ integer_to_list(?PORT_INTERNAL) ++ "</output>
+            <apply-actions>
+                <action>
+                    <order>0</order>
+                    <output-action>
+                        <output-node-connector>"
+                            ++ integer_to_list(?PORT_INTERNAL) ++
+                       "</output-node-connector>
+                    </output-action>
+                </action>
+            </apply-actions>
         </instruction>
     </instructions>
 </flow>
 "},
-{4,"
+{5,
+"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>
 <flow xmlns=\"urn:opendaylight:flow:inventory\">
     <priority>50</priority>
     <flow-name>ip-from-bplane</flow-name>
@@ -171,11 +240,21 @@ defaults(ip,
         </ethernet-match>
         <ipv4-destination>" ++ IpInternal ++ "/255.255.255.255</ipv4-destination>
     </match>
+    <id>5</id>
     <table_id>0</table_id>
     <instructions>
         <instruction>
             <order>0</order>
-            <output>LOCAL</output>
+            <apply-actions>
+                <action>
+                    <order>0</order>
+                    <output-action>
+                        <output-node-connector>
+                            LOCAL
+                        </output-node-connector>
+                    </output-action>
+                </action>
+            </apply-actions>
         </instruction>
     </instructions>
 </flow>
@@ -183,7 +262,8 @@ defaults(ip,
 
 
 
-{5,"
+{6,
+"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>
 <flow xmlns=\"urn:opendaylight:flow:inventory\">
     <priority>40</priority>
     <flow-name>ip2external</flow-name>
@@ -195,19 +275,29 @@ defaults(ip,
         </ethernet-match>
         <ipv4-source>" ++ IpExternal ++ "/255.255.255.255</ipv4-source>
     </match>
+    <id>6</id>
     <table_id>0</table_id>
     <instructions>
         <instruction>
             <order>0</order>
-            <src_mac>" ++ MacSwitch ++ "</src_mac>
-        </instruction>
-        <instruction>
-            <order>1</order>
-            <dst_mac>" ++ MacGateway ++ "</dst_mac>
-        </instruction>
-        <instruction>
-            <order>1</order>
-            <output>" ++ integer_to_list(?PORT_EXTERNAL) ++ "</output>
+            <apply-actions>
+                <action>
+                    <order>0</order>
+                    <set-dl-src-action>" ++ MacSwitch ++ "</set-dl-src-action>
+                </action>
+                <action>
+                    <order>1</order>
+                    <set-dl-dst-action>" ++ MacGateway ++ "</set-dl-dst-action>
+                </action>
+                <action>
+                    <order>2</order>
+                    <output-action>
+                        <output-node-connector>"
+                            ++ integer_to_list(?PORT_EXTERNAL) ++
+                       "</output-node-connector>
+                    </output-action>
+                </action>
+            </apply-actions>
         </instruction>
     </instructions>
 </flow>

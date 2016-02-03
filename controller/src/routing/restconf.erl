@@ -51,7 +51,7 @@ flow_send(noflow) ->
 flow_send({FlowId, Flow}) ->
     flow_send({0, FlowId, Flow});
 flow_send({TableId, FlowId, Flow}) ->
-    %%io:format("Sending:~n~s~n~s~n",[make_flow_url(FlowId), Flow]),
+    %%io:format("Sending:~n~s~n",[Flow]),
     put_method(make_flow_url(TableId, FlowId), "application/xml", Flow).
 
 table_delete(TableId) ->
