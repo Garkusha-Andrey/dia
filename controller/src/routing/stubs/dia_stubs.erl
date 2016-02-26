@@ -56,8 +56,8 @@ connections_get() ->
      ].
 
 get_instance_mac(InstanceId) ->
-    lists:flatten(lists:duplicate(5,integer_to_list(InstanceId) ++ ":"))
-	++ integer_to_list(InstanceId).
+    lists:flatten(lists:duplicate(5,"0" ++ integer_to_list(InstanceId) ++ ":"))
+       ++ "0" ++ integer_to_list(InstanceId).
 get_switch_ip()->
     {"10.0.0.5","255.255.255.0"}.
 get_switch_mac()->

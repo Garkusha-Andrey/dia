@@ -52,7 +52,9 @@ make(Type, Ip, Mask, Gateway) ->
             <apply-actions>
                 <action>
                     <order>0</order>
-                    <set-dl-dst-action>" ++ Gateway ++ "</set-dl-dst-action>
+                    <set-dl-dst-action>
+                        <address>" ++ Gateway ++ "</address>
+                    </set-dl-dst-action>
                 </action>
                 <action>
                     <order>1</order>
@@ -283,11 +285,15 @@ defaults(ip,
             <apply-actions>
                 <action>
                     <order>0</order>
-                    <set-dl-src-action>" ++ MacSwitch ++ "</set-dl-src-action>
+                    <set-dl-src-action>
+                        <address>" ++ MacSwitch ++ "</address>
+                    </set-dl-src-action>
                 </action>
                 <action>
                     <order>1</order>
-                    <set-dl-dst-action>" ++ MacGateway ++ "</set-dl-dst-action>
+                    <set-dl-dst-action>
+                        <address>" ++ MacGateway ++ "</address>
+                    </set-dl-dst-action>
                 </action>
                 <action>
                     <order>2</order>
