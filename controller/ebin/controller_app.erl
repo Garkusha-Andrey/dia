@@ -21,63 +21,29 @@
 
 %% @doc Must be called from script or erlang shell
 install(Nodes) ->
-	%erl -sname b -kernel distributed \[\{controller_app,5000,\[\'a@alexa-Aspire-V5-572PG\',\{\'b@alexa-Aspire-V5-572PG\',\'c@alexa-Aspire-V5-572PG\'\}\]\}\] -kernel sync_nodes_mandatory \[\'a@alexa-Aspire-V5-572PG\',\'c@alexa-Aspire-V5-572PG\'\]
 	io:format("~nI am in install() for nodes ~p~n",[Nodes]),
 	%Result = mnesia:create_schema(Nodes),
 	rpc:multicall(Nodes, application, start, [mnesia]),
-	%rpc:multicall(Nodes, application, start, [controller_app]),
-
-	case mnesia:change_config(extra_db_nodes, Nodes) of
-		{ok, Nodes} ->
-			case catch mnesia:table_info(diaConfig, attributes) of
-				{'EXIT', _} ->
-					mnesia:create_table(diaConfig,
+	
+	%io:format("~nResult is ~p~n",[Result]),
+    Result1 = mnesia:create_table(diaConfig,
                         [{record_name, diaConfig},
 						 {attributes, record_info(fields, diaConfig)},
-                         {ram_copies, Nodes}]);
-				_ ->
-					mnesia:add_table_copy(diaConfig, Nodes, ram_copies)
-			end,
-			case catch mnesia:table_info(diaIpAddress, attributes) of
-				{'EXIT', _} ->
-					mnesia:create_table(diaIpAddress,
-                        [{record_name, diaIpAddress},
-						 {attributes, record_info(fields, diaIpAddress)},
-                         {ram_copies, Nodes}]);
-				_ ->
-					mnesia:add_table_copy(diaIpAddress, Nodes, ram_copies)
-			end,
-			case catch mnesia:table_info(diaLocalIpAddress, attributes) of
-				{'EXIT', _} ->
-					mnesia:create_table(diaLocalIpAddress,
-										[{record_name, diaLocalIpAddress},
-										 {attributes, record_info(fields, diaLocalIpAddress)},
-										 {ram_copies, Nodes}]);
-				_ ->
-					mnesia:add_table_copy(diaLocalIpAddress, Nodes, ram_copies)
-			end,
-			case catch mnesia:table_info(globalData, attributes) of
-				{'EXIT', _} ->
-					mnesia:create_table(globalData,
-										[{record_name, globalData},
-										 {attributes, record_info(fields, globalData)},
-										 {ram_copies, Nodes}]);
-				_ ->
-					mnesia:add_table_copy(globalData, Nodes, ram_copies)
-			end,
-			case catch mnesia:table_info(instanceWeight, attributes) of
-				{'EXIT', _} ->
-					mnesia:create_table(instanceWeight,
-										[{record_name, instanceWeight},
-										 {attributes, record_info(fields, instanceWeight)},
-										 {ram_copies, Nodes}]);
-				_ ->
-					mnesia:add_table_copy(instanceWeight, Nodes, ram_copies)
-			end;
-		_ ->
-			do_nothing
-	end.
-
+                         {ram_copies, Nodes}]),
+	io:format("~nResult1 is ~w~n",[Result1]),
+    Result2 = mnesia:create_table(diaIpAddress,
+                        [
+						 %{attributes, set},
+                         {ram_copies, Nodes}]),
+	io:format("~nResult2 is ~w~n",[Result2]),
+    Result3 = mnesia:create_table(diaLocalIpAddress,
+                        [
+						 %{attributes, record_info(fields, diaLocalIpAddress)},
+                         {ram_copies,  Nodes}]),
+	mnesia:change_config(extra_db_nodes, Nodes),
+                         %{local_content, true}]),
+	io:format("~nResult3 is ~w~n",[Result3]),
+	ok.
 
 %% start/2
 %% ====================================================================
@@ -90,16 +56,21 @@ install(Nodes) ->
 %% start({failover, Node}, Args) is only called
 %% when a start_phase key is defined.
 start(normal, []) ->
-	%case application:get_application(mnesia) of
-	%	undefined ->
-	%		application:start(mnesia);
-	%	{ok, mnesia} ->
-	%		ok
-	%end,
+	case application:get_application(mnesia) of
+		undefined ->
+			application:start(mnesia);
+		{ok, mnesia} ->
+			ok
+	end,
 	io:format("~n Before install!!! ~n"),
 	Nodes = [node()| nodes()],
 	install(Nodes),
 	wait_for_tables(),
+	lists:foreach(fun(Node) ->
+						  mnesia:add_table_copy(diaConfig, Node,
+											   ram_copies)
+				  end,
+				  Nodes),
     controller_sub:start_link();
 start({takeover, _OtherNode}, []) ->
 	case application:get_application(mnesia) of
@@ -119,7 +90,6 @@ start({takeover, _OtherNode}, []) ->
 -spec stop(State :: term()) ->  Any :: term().
 %% ====================================================================
 stop(_State) ->
-	io:format("I am in stop~n"),
 	%Nodes = [node() | nodes()],
 	%mnesia:delete_schema(Nodes),
     ok.
@@ -130,19 +100,23 @@ stop(_State) ->
 ask(Question) ->
     controller_server:ask(Question).
 
-change_configuration(diaLocal, Arg) ->	
+change_configuration(diaLocal, Arg) ->
+	
 	controller_server:change_configuration(diaLocal, Arg);
 change_configuration(diaIp, Arg) ->
 	controller_server:change_configuration(diaIp, Arg).
-change_configuration([Args]) ->
-	io:format("XKULALE~n"),
-	controller_server:change_configuration(Args).
+change_configuration([PeerId, RemotePeerIp, DiaInstanceId]) ->
+	
+	F = fun() ->
+        mnesia:write(#diaConfig{peerId         = PeerId,
+								remotePeerIp  = RemotePeerIp,
+								diaInstanceId = DiaInstanceId})
+    end,
+    mnesia:activity(transaction, F).
+	%controller_server:change_configuration(Arg).
 
 wait_for_tables() ->
 mnesia:wait_for_tables([diaConfig,
 						diaIpAddress,
-						diaLocalIpAddress,
-						globalData,
-						instanceWeight], 
+						diaLocalIpAddress], 
 					   15000).
-

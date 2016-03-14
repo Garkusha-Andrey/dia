@@ -53,6 +53,7 @@ change_configuration(diaLocal, Args) ->
 change_configuration(diaIp, Args) -> 
     gen_server:cast({global, ?MODULE}, {new_config_diaIp, Args}).
 change_configuration(Args) -> 
+	io:format("XKULALE2, Args ~p~n",[Args]),
     gen_server:cast({global, ?MODULE}, {new_config, Args}).
 
 
@@ -93,13 +94,36 @@ handle_call(_Call, _From, State) ->
 	NewState :: term(),
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
+%handle_cast({new_config,Args}, State) ->
+%	io:format("#1: I am in handle_cast for new_config!!! Args ~p~n",[Args]),
+%	{noreply, State};
 
-handle_cast({new_config,{PeerId, RemotePeerIp, DiaInstanceId}}, State) ->
+handle_cast({new_config,[PeerId, RemotePeerIp, DiaInstanceId]}, State) ->
 	io:format("I am in handle_cast for new_config!!!~n"),
 	F = fun() ->
-        mnesia:write(diaConfig, #diaConfig{peerId         = PeerId,
+        mnesia:write(#diaConfig{peerId         = PeerId,
 										   remotePeerIp  = RemotePeerIp,
 										   diaInstanceId = DiaInstanceId})
+    end,
+    mnesia:activity(transaction, F),
+	{noreply, State};
+handle_cast({new_config,[_Enode,PeerId, LocalIp, DiaIp, RemotePeerIp, DiaInstanceId, MacLocalIp, DiaMacIp]}, State) ->
+	io:format("I am in handle_cast for new_config!!!~n"),
+	%NewPeerId = list_to_integer(atom_to_list(PeerId)),
+	NewDiaInstId = case is_integer(DiaInstanceId) of
+				  true ->
+					  DiaInstanceId;
+				  false ->
+					  list_to_integer(atom_to_list(DiaInstanceId))
+			  end,
+	
+	F = fun() ->
+        mnesia:write(#diaConfig{peerId         = PeerId,
+								remotePeerIp  = RemotePeerIp,	
+								diaInstanceId = NewDiaInstId}),
+		mnesia:write(#diaLocalIpAddress{diaInstanceId = NewDiaInstId, ipAddress = LocalIp, macIpAddress = MacLocalIp}),
+		mnesia:write(#diaIpAddress{diaInstanceId = NewDiaInstId, ipAddress = DiaIp, macIpAddress = DiaMacIp})
+		
     end,
     mnesia:activity(transaction, F),
 	{noreply, State};
@@ -116,7 +140,8 @@ handle_cast({new_config_diaIp,IpAddress}, State) ->
     mnesia:activity(transaction, F),
 	{noreply, State};
 
-handle_cast(_Cast, State) ->
+handle_cast(Cast, State) ->
+	io:format("Cast is ~p~n",[Cast]),
     {noreply, State}.
 
 %% handle_info/2
@@ -139,6 +164,7 @@ handle_info({nodeup, Node}, State) ->
 handle_info({nodedown, Node}, State) ->
 	%% do smth
     io:format("~nNode ~w is down! The current state is ~w~n",[Node,State]),
+	controller_lib:delete(Node),
 	{noreply, State};
 handle_info(_Info, State) ->
     {noreply, State}.
@@ -188,9 +214,7 @@ check_tables(Node) ->
 			case catch mnesia:table_info(diaIpAddress, attributes) of
 				{'EXIT', _} ->
 					mnesia:create_table(diaIpAddress,
-                        [
-						 %{attributes, set},
-                         {ram_copies, Node}]);
+                        [{ram_copies, Node}]);
 				_ ->
 					mnesia:add_table_copy(diaIpAddress, Node, ram_copies)
 			end,
@@ -201,6 +225,22 @@ check_tables(Node) ->
 										 {ram_copies,  Node}]);
 				_ ->
 					mnesia:add_table_copy(diaLocalIpAddress, Node, ram_copies)
+			end,
+			case catch mnesia:table_info(globalData, attributes) of
+				{'EXIT', _} ->
+					mnesia:create_table(globalData,
+										[{attributes, record_info(fields, globalData)},
+										 {ram_copies,  Node}]);
+				_ ->
+					mnesia:add_table_copy(globalData, Node, ram_copies)
+			end,
+			case catch mnesia:table_info(instanceWeight, attributes) of
+				{'EXIT', _} ->
+					mnesia:create_table(instanceWeight,
+										[{attributes, record_info(fields, instanceWeight)},
+										 {ram_copies,  Node}]);
+				_ ->
+					mnesia:add_table_copy(instanceWeight, Node, ram_copies)
 			end;
 		_ ->
 			do_nothing
@@ -213,6 +253,5 @@ check_tables(Node) ->
 
 
 			
-
 
 

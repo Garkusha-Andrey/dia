@@ -1,0 +1,9 @@
+{application, controller_app,
+[{vsn, "1.0.0"},
+{description, "Answer vital questions"},
+{modules, },
+{applications, [stdlib, kernel]},
+{registered, },
+
+]}
+]}.

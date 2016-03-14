@@ -1,9 +1,9 @@
-{application,controller_app,
-             [{description,"Controller of diameter instances"},
-              {vsn,"0.0.1"},
-              {modules,[controller_app,controller_server,controller_sub,
-                        controller_sup,dia_stubs,flows,restconf,routing]},
-              {registered,[controller_app,controller_sup,controller_server]},
-              {applications,[kernel,stdlib,inets]},
-              {mod,{controller_app,[]}},
-              {env,[]}]}.
+{application, controller_app,
+[{vsn, "1.0.0"},
+{description, ""},
+{modules, [controller_app, controller_sup, controller_server, contrroler_lib, flows, restconf, routing, boot]},
+{applications, [stdlib, kernel]},
+{registered, [controller_app, controller_sup, controller_server]},
+{mod, {controller_app, []}}
+
+]}.

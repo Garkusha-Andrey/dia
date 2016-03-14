@@ -3,3 +3,9 @@
 .rebar/
 .eunit/
 erl_crash.dump
+controller/amnesia/
+controller/bmnesia/
+controller/cmnesia/
+.project
+org.*
+.buildpath
