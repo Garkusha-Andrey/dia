@@ -4,7 +4,7 @@
 	%% for test
 	 test_update/1]).
 
--include("stubs/dia_stubs.hrl").
+-include("controller_app.hrl").
 
 -record(instanceChunks, {id,
                          weight,
@@ -23,8 +23,8 @@ init()->
 
     restconf:table_delete(0),
 
-    {IpInt, MaskInt} = dia_stubs:get_switch_ip(),
-    {IpExt, MaskExt} = dia_stubs:get_public_ip(),
+    {IpInt, MaskInt} = controller_lib:get_ovsIp(),
+    {IpExt, MaskExt} = controller_lib:get_publicIp(),
 
     lists:foreach(fun(A) -> restconf:flow_send(A) end,
 		  flows:defaults(arp,
@@ -34,8 +34,8 @@ init()->
     lists:foreach(fun(A) -> restconf:flow_send(A) end,
 		  flows:defaults(ip,
 				[IpInt,IpExt,
-				 dia_stubs:get_switch_mac(),
-				 dia_stubs:get_gateway_mac()])),
+				 controller_lib:get_ovsMac(),
+				 controller_lib:get_extGwMac()])),
     ok.
 
 update()->
@@ -47,7 +47,7 @@ test_update(Iteration)->
     [{freeChunks, FreeChunks}] = ets:lookup(table, freeChunks),
 
 
-    Weights = dia_stubs:instance_weights_get(Iteration),
+    Weights = controller_lib:instance_weights_get(Iteration),
 
     %% set the new weights
     Instances1 = update_weights(Instances, Weights),
@@ -69,7 +69,7 @@ test_update(Iteration)->
     lists:foreach(fun(Connection) ->
                           restconf:flow_send(
                             exception_for_connection(Connection, Instances5))
-                  end, dia_stubs:connections_get()),
+                  end, controller_lib:get_connections()),
 
     %% TODO remove obsolete exceptions
 
@@ -86,7 +86,7 @@ test_update(Iteration)->
 						  element(1,Chunk)),
                                               "0.0.0." ++
                                                 integer_to_list(?NUM_CHUNKS-1),
-                       dia_stubs:get_instance_mac(Instance#instanceChunks.id)))
+                       controller_lib:get_instance_mac(Instance#instanceChunks.id)))
                                   end, Instance#instanceChunks.chunks)
                   end, Instances5),
 
@@ -163,7 +163,7 @@ exception_for_connection(Connection, Instances) ->
             flows:make(exception,
 		       Connection#diaConfig.remotePeerIp,
 		       ?FULL_MASK,
-	      dia_stubs:get_instance_mac(Connection#diaConfig.diaInstanceId))
+	      controller_lib:get_instance_mac(Connection#diaConfig.diaInstanceId))
     end.
 
 
@@ -194,7 +194,7 @@ update_weights(InstanceList, Weights) ->
 int_update_weights(OldInstanceList, [Weight | RWeights],
                  NewInstanceList, PrevTotalWeight) ->
     CompareFunc = fun(Instance) ->
-                Instance#instanceChunks.id == Weight#instanceWeight.id
+                Instance#instanceChunks.id == Weight#instanceWeight.diaInstanceId
                   end,
 
     TotalWeight = PrevTotalWeight + Weight#instanceWeight.weight,
@@ -203,7 +203,7 @@ int_update_weights(OldInstanceList, [Weight | RWeights],
         [] ->
 	    %% no such ID in the old instance list (new instance booted) - add
 	    ExistingInstance = null,
-            NewInstance = #instanceChunks{id=Weight#instanceWeight.id,
+            NewInstance = #instanceChunks{id=Weight#instanceWeight.diaInstanceId,
                                           weight=Weight#instanceWeight.weight};
 
         [ExistingInstance] ->

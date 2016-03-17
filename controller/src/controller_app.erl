@@ -134,7 +134,7 @@ change_configuration(diaLocal, Arg) ->
 	controller_server:change_configuration(diaLocal, Arg);
 change_configuration(diaIp, Arg) ->
 	controller_server:change_configuration(diaIp, Arg).
-change_configuration([Args]) ->
+change_configuration(Args) ->
 	io:format("XKULALE~n"),
 	controller_server:change_configuration(Args).
 

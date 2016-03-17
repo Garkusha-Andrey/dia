@@ -15,9 +15,9 @@
 		 get_weight/1,
 		 get_diaIp/1,
 		 get_ovsIp/0,
-		 get_ovsMacIp/0,
-		 get_ovsPublicIp/0,
-		 get_extGMacIp/0,
+		 get_ovsMac/0,
+		 get_publicIp/0,
+		 get_extGwMac/0,
 		 instance_weights_get/0,
 		 instance_weights_get/1,
 		 get_instance_mac/1,
@@ -252,21 +252,21 @@ get_GlobalData() ->
 	end.
 
 
-get_ovsPublicIp() ->
+get_publicIp() ->
 	GlobalDataRec = get_GlobalData(),
 	GlobalDataRec#globalData.publicIp.
 
-get_ovsMacIp() ->
+get_ovsMac() ->
 	GlobalDataRec = get_GlobalData(),
-	GlobalDataRec#globalData.ovsMacIp.
+	GlobalDataRec#globalData.ovsMac.
 
 get_ovsIp() ->
 	GlobalDataRec = get_GlobalData(),
 	GlobalDataRec#globalData.ovsIp.
 
-get_extGMacIp() ->
+get_extGwMac() ->
 	GlobalDataRec = get_GlobalData(),
-	GlobalDataRec#globalData.extGMacIp.
+	GlobalDataRec#globalData.extGwMac.
 
 instance_weights_get() ->
         instance_weights_get(1).

@@ -14,9 +14,9 @@
 -record(diaIpAddress, {diaInstanceId=undefined, ipAddress = undefined, macIpAddress = undefined}).
 
 -record(globalData, {ovsIp = {undefined, undefined},
-					 ovsMacIp = undefined,
+					 ovsMac = undefined,
 					 publicIp = {undefined,undefined},
-					 extGMacIp = undefined}).
+					 extGwMac = undefined}).
 
 -record(instanceWeight, {diaInstanceId=undefined,
                          weight=undefined}).

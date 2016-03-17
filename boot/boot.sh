@@ -103,7 +103,7 @@ echo "\nEnodeId: " $ENODEN
  
 
 
-if [ $APPLICATION="" ]; then
+if [ $APPLICATION = "" ]; then
 	echo "Empty Apl"
 	if [ "$MACLOCALIP" != "" ] && [ "$PEERID" != "" ] && \
 	[ "$LOCALIP" != "" ] && [ "$RPEERID" != "" ] && [ "$DIAINSTID" != "" ] \
@@ -132,11 +132,11 @@ else
 			if [ "$RENODE" != "" ]
 			then
 			echo "Then != controller_app"
-			erl -name $ENODEN  -s boot start $RENODE 
+			erl -name $ENODEN  -s boot start $RENODE \
 			-s $APPLICATION change_configuration $ENODEN $PEERID $LOCALIP \
 			$DIAIP $RPEERID $DIAINSTID $MACLOCALIP $DIAMACIP
 		else
-			erl -name $ENODEN -s boot start $RENODE 
+			erl -name $ENODEN -s boot start $RENODE \
 			-s $APPLICATION change_configuration $ENODEN $PEERID $LOCALIP \
 			$DIAIP $RPEERID $DIAINSTID $MACLOCALIP $DIAMACIP
 		fi

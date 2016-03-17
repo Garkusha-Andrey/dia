@@ -3,7 +3,7 @@
   {description, "Controller of diameter instances"},
   {vsn, "0.0.1"},
   {modules, [controller_app, controller_sup, controller_server,
-             routing,restconf,flows,dia_stubs]},
+             routing,restconf,flows]},
   {registered, [controller_app, controller_sup, controller_server]},
   {applications, [kernel,stdlib,inets]},
   {mod, {controller_app, []}},

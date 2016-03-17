@@ -9,3 +9,4 @@ controller/cmnesia/
 .project
 org.*
 .buildpath
+\#*\#
