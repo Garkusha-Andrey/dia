@@ -7,8 +7,8 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([start/0,
-		 start/1]).
+-export([start/1,
+		 start/0]).
 
 
 
@@ -19,17 +19,17 @@ start() ->
 io:format("I am in boot:start()~n"),
 	case application:get_application(controller_app) of
 		undefined ->
+			io:format("Controller App is NOT started!~n"),
 			application:start(controller_app);
 		{ok, _Value} ->
-            do_nothing
+			io:format("Controller App is started!~n")
     end.
-
-start([Node]) ->
-	case net_adm:ping(Node) of
+start([REnode]) ->
+	case net_adm:ping(REnode) of
 		pong ->
-			start();
+			ok;
 		_ ->
-			error_logger:error_report("The node ~p could not be connected to node ~p!~n",[node(), Node])
+			error_logger:error_report("The node ~p could not be connected to node ~p!~n",[node(), REnode])
 	end.	
 
  

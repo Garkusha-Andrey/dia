@@ -4,7 +4,7 @@
 
 -module(controller_server).
 -behaviour(gen_server).
--export([start_link/0, stop/0, ask/1]).
+-export([start_link/0, stop/0, check_tables/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          code_change/3, terminate/2]).
 %% ====================================================================
@@ -43,17 +43,14 @@ start_link() ->
 stop() ->
     gen_server:call({global, ?MODULE}, stop).
 
-ask(Question) -> % the question doesn't matter!
-    gen_server:cast({global, ?MODULE}, {new_config, Question}).
-	%gen_server:call({global, ?MODULE}, question).
-
-
 change_configuration(diaLocal, Args) -> 
     gen_server:cast({global, ?MODULE}, {new_config_diaLocal, Args});
 change_configuration(diaIp, Args) -> 
     gen_server:cast({global, ?MODULE}, {new_config_diaIp, Args}).
 change_configuration(Args) -> 
-	io:format("XKULALE2, Args ~p~n",[Args]),
+	mnesia:system_info(),
+	io:format("XKULALE2, Args ~p, Pid ~p~n",[Args, self()]),
+	
     gen_server:cast({global, ?MODULE}, {new_config, Args}).
 
 
@@ -80,7 +77,12 @@ handle_call(question, _From, State) ->
     {reply, Answer, State};
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
-handle_call(_Call, _From, State) ->
+handle_call({check_tables, Node}, _From, State) ->
+	Answer = check_tables(Node),
+    {reply, Answer, State};
+
+handle_call(Call, _From, State) ->
+	io:format("Call is ~p~n",[Call]),
     {noreply, State}.
 
 %% handle_cast/2
@@ -94,52 +96,38 @@ handle_call(_Call, _From, State) ->
 	NewState :: term(),
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
-%handle_cast({new_config,Args}, State) ->
-%	io:format("#1: I am in handle_cast for new_config!!! Args ~p~n",[Args]),
-%	{noreply, State};
+handle_cast({new_config,[diameter, Enode, LocalIp, DiaInstId, MacLocalIp]}, State) ->
 
-handle_cast({new_config,[PeerId, RemotePeerIp, DiaInstanceId]}, State) ->
-	io:format("I am in handle_cast for new_config!!!~n"),
+	io:format("I am in handle_cast for new_config for diameter!!!~n"),
 	F = fun() ->
-        mnesia:write(#diaConfig{peerId         = PeerId,
-										   remotePeerIp  = RemotePeerIp,
-										   diaInstanceId = DiaInstanceId})
+        mnesia:write(#diaConnections{node = Enode,
+									 diaInstanceId = DiaInstId}),
+		mnesia:write(#diaLocalConfig{diaInstanceId = DiaInstId, 
+									  ipAddress = LocalIp,
+									  macIpAddress = MacLocalIp})		
     end,
     mnesia:activity(transaction, F),
 	{noreply, State};
-handle_cast({new_config,[_Enode,PeerId, LocalIp, DiaIp, RemotePeerIp, DiaInstanceId, MacLocalIp, DiaMacIp]}, State) ->
-	io:format("I am in handle_cast for new_config!!!~n"),
-	%NewPeerId = list_to_integer(atom_to_list(PeerId)),
-	NewDiaInstId = case is_integer(DiaInstanceId) of
-				  true ->
-					  DiaInstanceId;
-				  false ->
-					  list_to_integer(atom_to_list(DiaInstanceId))
-			  end,
+handle_cast({new_config,[OVSIp, OVSMask, ExtGIp, OVSPubIp, OVSMAC, OVSPubMask]}, State) ->
+
+	io:format("I am in handle_cast for new_config for global!!!~n"),
 	
 	F = fun() ->
-        mnesia:write(#diaConfig{peerId         = PeerId,
-								remotePeerIp  = RemotePeerIp,	
-								diaInstanceId = NewDiaInstId}),
-		mnesia:write(#diaLocalIpAddress{diaInstanceId = NewDiaInstId, ipAddress = LocalIp, macIpAddress = MacLocalIp}),
-		mnesia:write(#diaIpAddress{diaInstanceId = NewDiaInstId, ipAddress = DiaIp, macIpAddress = DiaMacIp})
+		mnesia:write(#globalData{ovsIp = {OVSIp, OVSMask},
+								 ovsMacIp = OVSMAC,
+								 publicIp = {OVSPubIp, OVSPubMask},
+								 extGMacIp = ExtGIp})
 		
     end,
     mnesia:activity(transaction, F),
+	routing:init(),
 	{noreply, State};
 handle_cast({new_config_diaLocal,IpAddress}, State) ->
 	F = fun() ->
-        mnesia:write(#diaLocalIpAddress{ipAddress = IpAddress})
+        mnesia:write(#diaLocalConfig{ipAddress = IpAddress})
     end,
     mnesia:activity(transaction, F),
 	{noreply, State};
-handle_cast({new_config_diaIp,IpAddress}, State) ->
-	F = fun() ->
-        mnesia:write(#diaIpAddress{ipAddress = IpAddress})
-    end,
-    mnesia:activity(transaction, F),
-	{noreply, State};
-
 handle_cast(Cast, State) ->
 	io:format("Cast is ~p~n",[Cast]),
     {noreply, State}.
@@ -157,14 +145,41 @@ handle_cast(Cast, State) ->
 %% ====================================================================
 handle_info({nodeup, Node}, State) ->
 	%% do smth
-    io:format("~nNode ~w is up!~n~n",[Node]),
-	rpc:call(Node, application, start, [mnesia]),
+    io:format("~nNode ~w is up!~n~n",[Node]),	
+    io:format("Befoe call rpc~n"),
+	CallRess = rpc:call(Node, application, start, [mnesia]),
+	io:format("CallRess ~p~n",[CallRess]),
 	check_tables(Node),
+	NodeL = atom_to_list(Node),
+	io:format("NodeL ~p~n",[NodeL]),
+	Nubmer = string:chr(NodeL, $@),
+	{NodeName, _Suffix} = lists:split(Nubmer, NodeL),
+	case NodeName of
+		"diameter" ->
+			ets:insert(diaNodes, Node),
+			io:format("The new diameterNodes is ~p~n",[ets:tab2list(diaNodes)]);
+		_ ->
+			do_nothing
+	end,
+		
+	
 	{noreply, State};
 handle_info({nodedown, Node}, State) ->
 	%% do smth
-    io:format("~nNode ~w is down! The current state is ~w~n",[Node,State]),
-	controller_lib:delete(Node),
+    NodeL = atom_to_list(Node),
+	Nubmer = string:chr(NodeL, $@),
+	{NodeName, _Suffix} = lists:split(Nubmer, NodeL),
+	case NodeName of
+		"controller" ->
+			io:format("~nNode ~w is down! The current state is ~w~n",[Node,State]),
+			do_nothing;
+		"diameter" ->
+			io:format("~nNode ~w is down! The current state is ~w~n",[Node,State]),
+			controller_lib:delete(Node),
+			SessionPid = controller_lib:get_session_pid(Node),
+			{SessionPid, Node} ! terminate,			
+			routing:update()
+	end,
 	{noreply, State};
 handle_info(_Info, State) ->
     {noreply, State}.
@@ -200,31 +215,30 @@ code_change(_OldVsn, State, _Extra) ->
 %% ====================================================================
 
 check_tables(Node) ->
+	io:format("I am in check_table~n"),
 	case mnesia:change_config(extra_db_nodes, [Node]) of
 		{ok, [Node]} ->
-			case catch mnesia:table_info(diaConfig, attributes) of
+			io:format("change_config is ok~n"),
+			case catch mnesia:table_info(diaConnections, attributes) of
 				{'EXIT', _} ->
-					mnesia:create_table(diaConfig,
-                        [{record_name, diaConfig},
-						 {attributes, record_info(fields, diaConfig)},
-                         {ram_copies, Node}]);
+					io:format("Exit for diaConfig~n"),
+					mnesia:create_table(diaConnections,
+                        [{record_name, diaConnections},
+						 {attributes, record_info(fields, diaConnections)},
+                         {ram_copies, Node}]),
+					mnesia:add_table_copy(diaConnections, Node, ram_copies);
 				_ ->
-					mnesia:add_table_copy(diaConfig, Node, ram_copies)
+					io:format("Tabinfo for diaconfig~n"),
+					mnesia:add_table_copy(diaConnections, Node, ram_copies)
 			end,
-			case catch mnesia:table_info(diaIpAddress, attributes) of
+			case catch mnesia:table_info(diaLocalConfig, attributes) of
 				{'EXIT', _} ->
-					mnesia:create_table(diaIpAddress,
-                        [{ram_copies, Node}]);
-				_ ->
-					mnesia:add_table_copy(diaIpAddress, Node, ram_copies)
-			end,
-			case catch mnesia:table_info(diaLocalIpAddress, attributes) of
-				{'EXIT', _} ->
-					mnesia:create_table(diaLocalIpAddress,
-										[{attributes, record_info(fields, diaLocalIpAddress)},
+					mnesia:create_table(diaLocalConfig,
+										[{attributes, record_info(fields, diaLocalConfig)},
 										 {ram_copies,  Node}]);
 				_ ->
-					mnesia:add_table_copy(diaLocalIpAddress, Node, ram_copies)
+					io:format("Tabinfo for diaLocalConfig~n"),
+					mnesia:add_table_copy(diaLocalConfig, Node, ram_copies)
 			end,
 			case catch mnesia:table_info(globalData, attributes) of
 				{'EXIT', _} ->
@@ -240,7 +254,17 @@ check_tables(Node) ->
 										[{attributes, record_info(fields, instanceWeight)},
 										 {ram_copies,  Node}]);
 				_ ->
+					io:format("Tabinfo for instanceWeight~n"),
 					mnesia:add_table_copy(instanceWeight, Node, ram_copies)
+			end,
+			case catch mnesia:table_info(servers, attributes) of
+				{'EXIT', _} ->
+					mnesia:create_table(servers,
+										[{attributes, record_info(fields, servers)},
+										 {ram_copies,  Node}]);
+				_ ->
+					io:format("Tabinfo for instanceWeight~n"),
+					mnesia:add_table_copy(servers, Node, ram_copies)
 			end;
 		_ ->
 			do_nothing

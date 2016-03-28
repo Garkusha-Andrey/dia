@@ -9,15 +9,13 @@
 %% ====================================================================
 -export([get_diaconfig/1,
 		 get_peerId/1,
-		 get_diaIpandMacIp/1,
 		 get_remotePeerIp/1,
 		 get_dianode/1,
 		 get_weight/1,
-		 get_diaIp/1,
 		 get_ovsIp/0,
-		 get_ovsMac/0,
-		 get_publicIp/0,
-		 get_extGwMac/0,
+		 get_ovsMacIp/0,
+		 get_ovsPublicIp/0,
+		 get_extGMacIp/0,
 		 instance_weights_get/0,
 		 instance_weights_get/1,
 		 get_instance_mac/1,
@@ -26,9 +24,10 @@
 		 get_diaLocalIp/1,
 		 get_diaLocalIpConfig/0,
 		 get_diaLocalMacIp/1,
-		 get_diaMacIp/1,
-		 get_diaIpConfig/0,
-		 delete/1]).
+		 delete/1,
+		 get_session_pid/1,
+		 delete_server_info/1,
+		 delete_session_data/1]).
 
 -include("controller_app.hrl").
 
@@ -42,10 +41,10 @@ get_instance_mac(InstanceId) ->
 
 get_diaconfig() ->
 	F = fun() ->
-		AllDistanceID = mnesia:all_keys(diaConfig),
+		AllDistanceID = mnesia:all_keys(diaConnections),
 		io:format("ALl Keys is ~p~n",[AllDistanceID]),
 		lists:foldl(fun(Elem, Acc) ->							
-							  Record = mnesia:read(diaConfig, Elem),
+							  Record = mnesia:read(diaConnections, Elem),
 							  [Record | Acc]
 					  end,
 					[],
@@ -54,17 +53,17 @@ get_diaconfig() ->
 	Result = mnesia:transaction(F),
 	case Result of
 		{aborted, Reason} ->
-			io:format("ERROR: Immpossible to get diaConfig due to ~p~n",[Reason]);
+			io:format("ERROR: Immpossible to get diaConnections due to ~p~n",[Reason]);
 		{atomic, ResultOfFun} ->
 			lists:append(ResultOfFun)
 	end.
 
 get_diaconfig(InstanceID) ->
 	F = fun() ->
-		AllDistanceID = mnesia:all_keys(diaConfig),
+		AllDistanceID = mnesia:all_keys(diaConnections),
 		io:format("ALl Keys is ~p~n",[AllDistanceID]),
 		lists:foldl(fun(Elem, Acc) when Elem == InstanceID ->							
-							  Record = mnesia:read(diaConfig, Elem),
+							  Record = mnesia:read(diaConnections, Elem),
 							  [Record | Acc];
 					   (_Elem,Acc) ->
 							Acc
@@ -75,7 +74,7 @@ get_diaconfig(InstanceID) ->
 	Result = mnesia:transaction(F),
 	case Result of
 		{aborted, Reason} ->
-			io:format("ERROR: Immpossible to get diaConfig due to ~p~n",[Reason]);
+			io:format("ERROR: Immpossible to get diaConnections due to ~p~n",[Reason]);
 		{atomic, ResultOfFun} ->
 			lists:append(ResultOfFun)
 	end.
@@ -96,7 +95,7 @@ get_weight(InstanceID) ->
 	Result = mnesia:transaction(F),
 	case Result of
 		{aborted, Reason} ->
-			io:format("ERROR: Immpossible to get diaConfig due to ~p~n",[Reason]);
+			io:format("ERROR: Immpossible to get instanceWeight due to ~p~n",[Reason]);
 		{atomic, ResultOfFun} ->
 			[InstWeigth] = lists:append(ResultOfFun),
 			InstWeigth#instanceWeight.weight
@@ -104,22 +103,22 @@ get_weight(InstanceID) ->
 	
 get_peerId(InstanceID) ->
 	[DiaConfigR] = get_diaconfig(InstanceID),
-	DiaConfigR#diaConfig.peerId.
+	DiaConfigR#diaConnections.peerId.
 
 get_remotePeerIp(InstanceID) ->
 	[DiaConfigR] = get_diaconfig(InstanceID),
-	DiaConfigR#diaConfig.remotePeerIp.
+	DiaConfigR#diaConnections.remotePeerIp.
 
 get_dianode(InstanceID) ->
 	[DiaConfigR] = get_diaconfig(InstanceID),
-	DiaConfigR#diaConfig.node.
+	DiaConfigR#diaConnections.node.
 	
 get_localIpandMacIp(InstanceID) ->
 	F = fun() ->
-		AllDistanceID = mnesia:all_keys(diaLocalIpAddress),
+		AllDistanceID = mnesia:all_keys(diaLocalConfig),
 		io:format("ALl Keys is ~p~n",[AllDistanceID]),
 		lists:foldl(fun(Elem, Acc) when Elem == InstanceID ->							
-							  Record = mnesia:read(diaLocalIpAddress, Elem),
+							  Record = mnesia:read(diaLocalConfig, Elem),
 							  [Record | Acc];
 					   (_Elem,Acc) ->
 							Acc
@@ -130,95 +129,34 @@ get_localIpandMacIp(InstanceID) ->
 	Result = mnesia:transaction(F),
 	case Result of
 		{aborted, Reason} ->
-			io:format("ERROR: Immpossible to get diaConfig due to ~p~n",[Reason]);
+			io:format("ERROR: Immpossible to get diaLocalConfig due to ~p~n",[Reason]);
 		{atomic, ResultOfFun} ->
 			[DiaLocalIPR] = lists:append(ResultOfFun),
-			{DiaLocalIPR#diaLocalIpAddress.ipAddress, DiaLocalIPR#diaLocalIpAddress.macIpAddress}
-	end.
-
-get_diaIpandMacIp(InstanceID) ->
-	F = fun() ->
-		AllDistanceID = mnesia:all_keys(diaIpAddress),
-		io:format("ALl Keys is ~p~n",[AllDistanceID]),
-		lists:foldl(fun(Elem, Acc) when Elem == InstanceID ->							
-							  Record = mnesia:read(diaIpAddress, Elem),
-							  [Record | Acc];
-					   (_Elem,Acc) ->
-							Acc
-					  end,
-					[],
-					AllDistanceID)
-		end,
-	Result = mnesia:transaction(F),
-	case Result of
-		{aborted, Reason} ->
-			io:format("ERROR: Immpossible to get diaConfig due to ~p~n",[Reason]);
-		{atomic, ResultOfFun} ->
-			[DiaIpR] = lists:append(ResultOfFun),
-			{DiaIpR#diaIpAddress.ipAddress, DiaIpR#diaIpAddress.macIpAddress}
-	end.
-
-get_diaIpConfig() ->
-	F = fun() ->
-		AllDistanceID = mnesia:all_keys(diaIpAddress),
-		io:format("ALl Keys is ~p~n",[AllDistanceID]),
-		lists:map(fun(Elem) ->
-						  mnesia:read(diaIpAddress, Elem)
-					  end,
-					AllDistanceID)
-		end,
-	Result = mnesia:transaction(F),
-	case Result of
-		{aborted, Reason} ->
-			io:format("ERROR: Immpossible to get diaConfig due to ~p~n",[Reason]);
-		{atomic, ResultOfFun} ->
-			lists:append(ResultOfFun)
+			{DiaLocalIPR#diaLocalConfig.ipAddress, DiaLocalIPR#diaLocalConfig.macIpAddress}
 	end.
 
 get_diaLocalIpConfig() ->
 	F = fun() ->
-		AllDistanceID = mnesia:all_keys(diaLocalIpAddress),
+		AllDistanceID = mnesia:all_keys(diaLocalConfig),
 		io:format("ALl Keys is ~p~n",[AllDistanceID]),
 		lists:map(fun(Elem) ->
-						  mnesia:read(diaLocalIpAddress, Elem)
+						  mnesia:read(diaLocalConfig, Elem)
 					  end,
 					AllDistanceID)
 		end,
 	Result = mnesia:transaction(F),
 	case Result of
 		{aborted, Reason} ->
-			io:format("ERROR: Immpossible to get diaLocalIpAddress due to ~p~n",[Reason]);
+			io:format("ERROR: Immpossible to get diaLocalConfig due to ~p~n",[Reason]);
 		{atomic, ResultOfFun} ->
 			lists:append(ResultOfFun)
 	end.
 
-get_diaIp(InstanceId) ->
-	Records = get_diaIpConfig(),
-	lists:filtermap(fun(RElem) ->
-						if RElem#diaIpAddress.diaInstanceId == InstanceId ->
-							   {true, RElem#diaIpAddress.ipAddress};
-						   true ->
-							   flse
-						end
-					end,
-					Records).
-
-get_diaMacIp(InstanceId) ->
-	Records = get_diaIpConfig(),
-	lists:filtermap(fun(RElem) ->
-						if RElem#diaIpAddress.diaInstanceId == InstanceId ->
-							   {true, RElem#diaIpAddress.macIpAddress};
-						   true ->
-							   flse
-						end
-					end,
-					Records).
-
 get_diaLocalIp(InstanceId) ->
 	Records = get_diaLocalIpConfig(),
 	lists:filtermap(fun(RElem) ->
-						if RElem#diaLocalIpAddress.diaInstanceId == InstanceId ->
-							   {true, RElem#diaLocalIpAddress.ipAddress};
+						if RElem#diaLocalConfig.diaInstanceId == InstanceId ->
+							   {true, RElem#diaLocalConfig.ipAddress};
 						   true ->
 							   flse
 						end
@@ -228,8 +166,8 @@ get_diaLocalIp(InstanceId) ->
 get_diaLocalMacIp(InstanceId) ->
 	Records = get_diaLocalIpConfig(),
 	lists:filtermap(fun(RElem) ->
-						if RElem#diaLocalIpAddress.diaInstanceId == InstanceId ->
-							   {true, RElem#diaLocalIpAddress.macIpAddress};
+						if RElem#diaLocalConfig.diaInstanceId == InstanceId ->
+							   {true, RElem#diaLocalConfig.macIpAddress};
 						   true ->
 							   flse
 						end
@@ -246,27 +184,27 @@ get_GlobalData() ->
 	Result = mnesia:transaction(F),
 	case Result of
 		{aborted, Reason} ->
-			io:format("ERROR: Immpossible to get diaConfig due to ~p~n",[Reason]);
+			io:format("ERROR: Immpossible to get globalData due to ~p~n",[Reason]);
 		{atomic, GlobalDataRec} ->
 			GlobalDataRec
 	end.
 
 
-get_publicIp() ->
+get_ovsPublicIp() ->
 	GlobalDataRec = get_GlobalData(),
 	GlobalDataRec#globalData.publicIp.
 
-get_ovsMac() ->
+get_ovsMacIp() ->
 	GlobalDataRec = get_GlobalData(),
-	GlobalDataRec#globalData.ovsMac.
+	GlobalDataRec#globalData.ovsMacIp.
 
 get_ovsIp() ->
 	GlobalDataRec = get_GlobalData(),
 	GlobalDataRec#globalData.ovsIp.
 
-get_extGwMac() ->
+get_extGMacIp() ->
 	GlobalDataRec = get_GlobalData(),
-	GlobalDataRec#globalData.extGwMac.
+	GlobalDataRec#globalData.extGMacIp.
 
 instance_weights_get() ->
         instance_weights_get(1).
@@ -302,15 +240,19 @@ instance_weights_get(Iteration) ->
 
 delete(Node) ->
 	io:format("xkulale: in delete!~n"),
-	delete_diaconfig(Node),
-	delete_diaLocalIpAddress(Node),
-	delete_diaIpAddress(Node).
-
-delete_diaconfig(Node) ->
 	Instances = get_instance_by_node(Node),
+	delete_diaconfig(Instances),
+	io:format("Before delete diaLocalConfig~n"),
+	delete_diaLocalIpAddress(Instances).
+
+delete_diaconfig(Instances) ->
+	io:format("in delete_diaconfig ~n"),
+	
+	io:format("Instances is ~p~n",[Instances]),
 	F = fun() -> 
-				lists:flatmap(fun(Elem) ->
-						  Record = mnesia:read(diaConfig, Elem),
+				lists:map(fun(Elem) ->
+						  [Record] = mnesia:read(diaConnections, Elem),
+						  io:format("Elem is ~p, Record is ~p~n",[Elem,Record]),
 					      mnesia:delete_object(Record)
 					  end,
 					Instances)		
@@ -318,16 +260,15 @@ delete_diaconfig(Node) ->
 	Result = mnesia:transaction(F),
 	case Result of
 		{aborted, Reason} ->
-			io:format("ERROR: Immpossible to get diaConfig due to ~p~n",[Reason]);
+			io:format("ERROR: Immpossible to get diaConnections due to ~p~n",[Reason]);
 		{atomic, ResultOfFun} ->
 			lists:append(ResultOfFun)
 	end.
 
-delete_diaLocalIpAddress(Node) ->
-	Instances = get_instance_by_node(Node),
+delete_diaLocalIpAddress(Instances) ->
 	F = fun() ->
-		lists:flatmap(fun(Elem) ->							
-							  Record = mnesia:read(diaLocalIpAddress, Elem),
+		lists:map(fun(Elem) ->							
+							  [Record] = mnesia:read(diaLocalConfig, Elem),
 							  mnesia:delete_object(Record)
 					  end,
 					Instances)
@@ -336,60 +277,133 @@ delete_diaLocalIpAddress(Node) ->
 	Result = mnesia:transaction(F),
 	case Result of
 		{aborted, Reason} ->
-			io:format("ERROR: Immpossible to get diaConfig due to ~p~n",[Reason]);
+			io:format("ERROR: Immpossible to get diaLocalConfig due to ~p~n",[Reason]);
 		{atomic, ResultOfFun} ->
 			lists:append(ResultOfFun)
-	end.
-
-delete_diaIpAddress(Node) ->
-	Instances = get_instance_by_node(Node),
-	io:format("XKULALE: Instances ~p~n",[Instances]),
-	case Instances of
-		[] ->
-			do_nothing;
-		_ ->
-			F = fun() ->
-						lists:flatmap(fun(Elem) ->							
-							  Record = mnesia:read(diaIpAddress, Elem),
-     						  mnesia:delete_object(Record)
-					  end,
-					Instances)
-				end,
-	Result = mnesia:transaction(F),
-	case Result of
-		{aborted, Reason} ->
-			io:format("ERROR: Immpossible to get diaConfig due to ~p~n",[Reason]);
-		{atomic, ResultOfFun} ->
-			lists:append(ResultOfFun)
-	end
 	end.
 
 get_instance_by_node(Node) ->
+	io:format("i am in get_instance_by node~n"),
 	F = fun() ->
-		DiaConfKeys = mnesia:all_keys(diaConfig),
-		io:format("DiaConfKeys Keys is ~p~n",[DiaConfKeys]),
+		DiaConfKeys = mnesia:all_keys(diaConnections),
+		io:format("diaConnections Keys is ~p~n",[DiaConfKeys]),
 		lists:foldl(fun(Elem, Acc) ->							
-							  Record = mnesia:read(diaConfig, Elem),
-							  case Record#diaConfig.node of
+							  [Record] = mnesia:read(diaConnections, Elem),
+							  io:format("get instance by node, Record is ~p, Elem is ~p~n",[Record, Elem]),
+							  case Record#diaConnections.node of
 								  Node ->
-									  [Record|Acc];
+									  [Elem|Acc];
 								  _ ->
-									  ok
+									  Acc
 							  end
 
 					  end,
+					[],
 					DiaConfKeys)		
 		end,
 	Result = mnesia:transaction(F),
+	io:format("Result is ~p~n",[Result]),
 	case Result of
 		{aborted, Reason} ->
 			error_logger:error_report("Impossible to get the dia instances from "
 									  "diaConfig table due to reason: ~p",[Reason]);
 		{atomic, ResultOfFun} ->
-			io:format("XKULALE: Result ~p~n",[ResultOfFun]),
-			lists:append(ResultOfFun)
+			io:format("XKULALE: ResultofFun ~p~n",[ResultOfFun]),
+			ResultOfFun
 	end.
 
+get_session_pid(Node) ->
+	F = fun() ->
+		ServersKeys = mnesia:all_keys(servers),
+		io:format("ServersKeys is ~p~n",[ServersKeys]),
+		lists:foldl(fun(Elem, Acc) ->							
+							  [Record] = mnesia:read(servers, Elem),
+							  io:format("get instance by node, Record is ~p, Elem is ~p~n",[Record, Elem]),
+							  case Record#servers.nodeId of
+								  Node ->
+									  [Record#servers.processId|Acc];
+								  _ ->
+									  Acc
+							  end
+
+					  end,
+					[],
+					ServersKeys)		
+		end,
+	Result = mnesia:transaction(F),
+	io:format("Result is ~p~n",[Result]),
+	case Result of
+		{aborted, Reason} ->
+			error_logger:error_report("Impossible to get the servers config from "
+									  "servers table due to reason: ~p",[Reason]);
+		{atomic, ResultOfFun} ->
+			io:format("XKULALE: ResultofFun ~p~n",[ResultOfFun]),
+			ResultOfFun
+	end.
+
+delete_session_data(Node) ->
+	SessionPid = get_session_pid(Node),
+	{SessionPid, Node} ! terminate,
+	delete_session(Node).
+
+delete_session(Node) ->
+	F = fun() ->
+		ServersKeys = mnesia:all_keys(servers),
+		io:format("ServersKeys is ~p~n",[ServersKeys]),
+		lists:foreach(fun(Elem, Acc) ->							
+							  [Record] = mnesia:read(servers, Elem),
+							  io:format("get record by node, Record is ~p, Elem is ~p~n",[Record, Elem]),
+							  case Record#servers.nodeId of
+								  Node ->
+									  mnesia:delete_object(Record);
+								  _ ->
+									  Acc
+							  end
+
+					  end,
+					[],
+					ServersKeys)		
+		end,
+	Result = mnesia:transaction(F),
+	io:format("Result is ~p~n",[Result]),
+	case Result of
+		{aborted, Reason} ->
+			error_logger:error_report("Impossible to get the servers config from "
+									  "servers table due to reason: ~p",[Reason]);
+		{atomic, ResultOfFun} ->
+			io:format("XKULALE: ResultofFun ~p~n",[ResultOfFun]),
+			ResultOfFun
+	end.
+
+delete_server_info(Node) ->
+	F = fun() ->
+		ServersKeys = mnesia:all_keys(servers),
+		io:format("ServersKeys is ~p~n",[ServersKeys]),
+		lists:foreach(fun(Elem) ->							
+							  [Record] = mnesia:read(servers, Elem),
+							  io:format("get record by node, Record is ~p, Elem is ~p~n",[Record, Elem]),
+							  case Record#servers.nodeId of
+								  Node ->
+									  NewRecord = Record#servers{nodeId = undefined,
+																 processId = undefined},
+									  mnesia:write(NewRecord);
+								  _ ->
+									  do_nothing
+							  end
+
+					  end,
+					ServersKeys)		
+		end,
+	Result = mnesia:transaction(F),
+	io:format("Result is ~p~n",[Result]),
+	case Result of
+		{aborted, Reason} ->
+			error_logger:error_report("Impossible to get the servers config from "
+									  "servers table due to reason: ~p",[Reason]);
+		{atomic, ResultOfFun} ->
+			io:format("XKULALE: ResultofFun ~p~n",[ResultOfFun]),
+			ResultOfFun
+	end.
 
 
 
