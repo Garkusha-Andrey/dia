@@ -101,22 +101,22 @@ handle_cast({new_config,[diameter, Enode, LocalIp, DiaInstId, MacLocalIp]}, Stat
 	io:format("I am in handle_cast for new_config for diameter!!!~n"),
 	F = fun() ->
         mnesia:write(#diaConnections{node = Enode,
-									 diaInstanceId = DiaInstId}),
+				     diaInstanceId = DiaInstId}),
 		mnesia:write(#diaLocalConfig{diaInstanceId = DiaInstId, 
-									  ipAddress = LocalIp,
-									  macIpAddress = MacLocalIp})		
+					     ipAddress = LocalIp,
+					     macIpAddress = MacLocalIp})		
     end,
     mnesia:activity(transaction, F),
 	{noreply, State};
-handle_cast({new_config,[OVSIp, OVSMask, ExtGIp, OVSPubIp, OVSMAC, OVSPubMask]}, State) ->
+handle_cast({new_config,[OVSIntIp, OVSIntMask, PublicIp, PublicMask, OVSMac, ExtGwMac]}, State) ->
 
 	io:format("I am in handle_cast for new_config for global!!!~n"),
 	
 	F = fun() ->
-		mnesia:write(#globalData{ovsIp = {OVSIp, OVSMask},
-								 ovsMacIp = OVSMAC,
-								 publicIp = {OVSPubIp, OVSPubMask},
-								 extGMacIp = ExtGIp})
+		mnesia:write(#globalData{ovsIpMask = {OVSIntIp, OVSIntMask},
+					 publicIpMask = {PublicIp, PublicMask},
+					 ovsMac = OVSMac,
+					 extGwMac = ExtGwMac})
 		
     end,
     mnesia:activity(transaction, F),

@@ -11,10 +11,10 @@
 -record(diaLocalConfig, {diaInstanceId=undefined, ipAddress = undefined, macIpAddress = undeifned}).
 
 %% @doc Record for the pre-defined parameters
--record(globalData, {ovsIp     = {undefined, undefined}, %% {"Backplain IP", "Backplain Ip Mask"}
-					 ovsMacIp  = undefined,              
-					 publicIp  = {undefined,undefined},  %%{"Diameter Service IP, Diameter Service Mask"}
-					 extGMacIp = undefined}).
+-record(globalData, {ovsIpMask     = {undefined, undefined}, %% {"Backplane IP", "Backplane IP Mask"}
+		     publicIpMask  = {undefined,undefined},  %% {"Diameter Service IP, Diameter Service Mask"}
+		     ovsMac   = undefined,
+		     extGwMac = undefined}).
 
 -record(instanceWeight, {diaInstanceId=undefined,
                          weight=undefined}).
