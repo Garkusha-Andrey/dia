@@ -113,10 +113,12 @@ handle_cast({new_config,[OVSIntIp, OVSIntMask, PublicIp, PublicMask, OVSMac, Ext
 	io:format("I am in handle_cast for new_config for global!!!~n"),
 	
 	F = fun() ->
-		mnesia:write(#globalData{ovsIpMask = {OVSIntIp, OVSIntMask},
-					 publicIpMask = {PublicIp, PublicMask},
-					 ovsMac = OVSMac,
-					 extGwMac = ExtGwMac})
+		mnesia:write(#globalData{ovsIpMask = {atom_to_list(OVSIntIp),
+						      atom_to_list(OVSIntMask)},
+					 publicIpMask = {atom_to_list(PublicIp),
+							 atom_to_list(PublicMask)},
+					 ovsMac   = atom_to_list(OVSMac),
+					 extGwMac = atom_to_list(ExtGwMac)})
 		
     end,
     mnesia:activity(transaction, F),

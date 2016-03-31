@@ -162,10 +162,10 @@ change_configuration(Args) ->
 wait_for_tables() ->
 	io:format("I am in wait for tables!~n~n"),
 	Res = mnesia:wait_for_tables([diaConnections,
-								  diaLocalConfig,
-								  globalData,
-								  instanceWeight], 
-					   15000),
+				      diaLocalConfig,
+				      globalData,
+				      instanceWeight], 
+				     15000),
 	io:format("Res is ~p~n",[Res]).
 
 parse_service_config(InputFileName) ->

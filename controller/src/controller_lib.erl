@@ -209,7 +209,7 @@ get_extGwMac() ->
 	GlobalDataRec#globalData.extGwMac.
 
 instance_weights_get() ->
-        instance_weights_get(1).
+        instance_weights_get(2).
 
 instance_weights_get(Iteration) ->
 

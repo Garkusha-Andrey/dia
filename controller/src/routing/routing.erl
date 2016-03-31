@@ -4,7 +4,7 @@
 	%% for test
 	 test_update/1]).
 
--include("controller_app.hrl").
+-include("../controller_app.hrl").
 
 -record(instanceChunks, {id,
                          weight,
@@ -36,18 +36,20 @@ init()->
 				[IpInt,IpExt,
 				 controller_lib:get_ovsMac(),
 				 controller_lib:get_extGwMac()])),
-    ok.
+
+    update().
 
 update()->
     test_update(2).
-test_update(Iteration)->
+test_update(_Iteration)->
 
     %% LOAD
     [{instances, Instances}] = ets:lookup(table, instances),
     [{freeChunks, FreeChunks}] = ets:lookup(table, freeChunks),
 
 
-    Weights = controller_lib:instance_weights_get(Iteration),
+    %% Weights = dia_stubs:instance_weights_get(Iteration),
+    Weights = controller_lib:instance_weights_get(),
 
     %% set the new weights
     Instances1 = update_weights(Instances, Weights),
@@ -126,7 +128,7 @@ reset_chunks_owner(Chunks) ->
 %%
 exception_for_connection(Connection, Instances) ->
     {ok, {_,_,_,Lsb}} = inet:parse_ipv4_address(
-                          Connection#diaConfig.remotePeerIp),
+                          Connection#diaConnections.remotePeerIp),
     Chunk = Lsb band (?NUM_CHUNKS-1),
     
     try 
@@ -135,7 +137,7 @@ exception_for_connection(Connection, Instances) ->
 %% start fun {
     case lists:member(Chunk, Instance#instanceChunks.chunks) of
         true ->
-            case Connection#diaConfig.diaInstanceId ==
+            case Connection#diaConnections.diaInstanceId ==
                          Instance#instanceChunks.id of
                 true ->
                     ok;
@@ -143,8 +145,8 @@ exception_for_connection(Connection, Instances) ->
                     io:format("found exception: ip(~s) "
                               "connected to instance(~w) "
                               "moved to instance(~w)~n",
-                              [Connection#diaConfig.remotePeerIp,
-                               Connection#diaConfig.diaInstanceId,
+                              [Connection#diaConnections.remotePeerIp,
+                               Connection#diaConnections.diaInstanceId,
                                Instance#instanceChunks.id]),
                     throw(exception)
             end;
@@ -161,9 +163,9 @@ exception_for_connection(Connection, Instances) ->
         throw:exception ->
             %%io:format("caught exception~n",[]),
             flows:make(exception,
-		       Connection#diaConfig.remotePeerIp,
+		       Connection#diaConnections.remotePeerIp,
 		       ?FULL_MASK,
-	      controller_lib:get_instance_mac(Connection#diaConfig.diaInstanceId))
+	      controller_lib:get_instance_mac(Connection#diaConnections.diaInstanceId))
     end.
 
 

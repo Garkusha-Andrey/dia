@@ -2,9 +2,9 @@
 
 %% @doc Record for basic configuration of diameter instances
 -record(diaConnections, {diaInstanceId=undefined,
-					node = node(),
-					peerId=undefined,
-                    remotePeerIp=undefined
+			node = node(),
+			peerId=undefined,
+			remotePeerIp=undefined
                     }).
 					
 %% @doc Record for local IP addresses of diameter instances (how local instances seek for each other)
