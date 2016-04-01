@@ -34,7 +34,11 @@
 -include("controller_app.hrl").
 
 get_connections() ->
-	get_diaconfig().
+    %% xantnef 01/04/2016 temporarily stubbed out
+    %%get_diaconfig().
+    [#servers{ipaddress = "1.2.3.4",
+	      port = 50000,
+	      nodeId = 1}].
 
 get_instance_mac(InstanceId) ->
     lists:flatten(lists:duplicate(5,integer_to_list(InstanceId) ++ ":"))

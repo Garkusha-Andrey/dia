@@ -8,7 +8,9 @@
                     }).
 					
 %% @doc Record for local IP addresses of diameter instances (how local instances seek for each other)
--record(diaLocalConfig, {diaInstanceId=undefined, ipAddress = undefined, macIpAddress = undeifned}).
+-record(diaLocalConfig, {diaInstanceId=undefined,
+			 ipAddress = undefined,
+			 macIpAddress = undeifned}).
 
 %% @doc Record for the pre-defined parameters
 -record(globalData, {ovsIpMask     = {undefined, undefined}, %% {"Backplane IP", "Backplane IP Mask"}
@@ -20,9 +22,10 @@
                          weight=undefined}).
 
 -record(servers, {port = undefined,
-				  ipaddress = undefined,
-				  realmId = undefined,
-				  realmHost = undefined,				  				  
-				  nodeId = undefined,
-				  processId = undefined}).
+		  ipaddress = undefined,
+		  realmId = undefined,
+		  realmHost = undefined,				  				  
+		  nodeId = undefined,
+		  processId = undefined}).
+
 -record(diameterNodes, {node =  undefined}).

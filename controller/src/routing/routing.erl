@@ -83,11 +83,12 @@ test_update(_Iteration)->
                                               basic,
                                               %% TODO3 add support for
                                               %%       arbitrary chunk number
-                                              "0.0.0." ++
-                                                integer_to_list(
-						  element(1,Chunk)),
-                                              "0.0.0." ++
-                                                integer_to_list(?NUM_CHUNKS-1),
+                                              {"0.0.0." ++
+					       integer_to_list(
+						 element(1,Chunk)),
+					       "0.0.0." ++
+					       integer_to_list(?NUM_CHUNKS-1)},
+					      noport,
                        controller_lib:get_instance_mac(Instance#instanceChunks.id)))
                                   end, Instance#instanceChunks.chunks)
                   end, Instances5),
@@ -98,11 +99,12 @@ test_update(_Iteration)->
 					       basic,
 					       %% TODO3 add support for
 					       %%       arbitrary chunk number
-					       "0.0.0." ++
-					         integer_to_list(
-						   element(1,FreeChunk)),
-					       "0.0.0." ++
-                                                 integer_to_list(?NUM_CHUNKS-1),
+					       {"0.0.0." ++
+						integer_to_list(
+						  element(1,FreeChunk)),
+						"0.0.0." ++
+						integer_to_list(?NUM_CHUNKS-1)},
+					       noport,
 					       drop))
 		  end, FreeChunks3),
 
@@ -128,46 +130,33 @@ reset_chunks_owner(Chunks) ->
 %%
 exception_for_connection(Connection, Instances) ->
     {ok, {_,_,_,Lsb}} = inet:parse_ipv4_address(
-                          Connection#diaConnections.remotePeerIp),
+                          Connection#servers.ipaddress),
     Chunk = Lsb band (?NUM_CHUNKS-1),
-    
-    try 
-        lists:foreach(fun(Instance) ->
 
-%% start fun {
-    case lists:member(Chunk, Instance#instanceChunks.chunks) of
-        true ->
-            case Connection#diaConnections.diaInstanceId ==
-                         Instance#instanceChunks.id of
-                true ->
-                    ok;
-                false ->
-                    io:format("found exception: ip(~s) "
-                              "connected to instance(~w) "
-                              "moved to instance(~w)~n",
-                              [Connection#diaConnections.remotePeerIp,
-                               Connection#diaConnections.diaInstanceId,
-                               Instance#instanceChunks.id]),
-                    throw(exception)
-            end;
-        _ ->
-            ok
-    end
-%% } end fun
-                      end, Instances)
-    of 
-        ok ->
-            %% no exception for this connection
-            noflow
-    catch
-        throw:exception ->
-            %%io:format("caught exception~n",[]),
-            flows:make(exception,
-		       Connection#diaConnections.remotePeerIp,
-		       ?FULL_MASK,
-	      controller_lib:get_instance_mac(Connection#diaConnections.diaInstanceId))
+    %%io:format("Connection ~p Chunk ~p Instances ~p~n", [Connection, Chunk, Instances]),
+    FilteredInstances = lists:filter(fun(Instance) ->
+					     Instance#instanceChunks.id == Connection#servers.nodeId
+				     end, Instances),
+    case FilteredInstances of
+	[] ->
+	    %% no such instance in our list. strange but ok
+	    noflow;
+
+	[TheInstance] ->
+	    %% normal case, one instance with this ID
+	    case lists:filter(fun(InstChunk) ->
+				      element(1, InstChunk) == Chunk
+			      end, TheInstance#instanceChunks.chunks) of
+		[] ->
+		    flows:make(exception,
+			       {Connection#servers.ipaddress, ?FULL_MASK},
+			       Connection#servers.port,
+			       controller_lib:get_instance_mac(Connection#servers.nodeId));
+		_ ->
+		    noflow
+	    end
+         %% several instances with this ID is definitely not ok
     end.
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%

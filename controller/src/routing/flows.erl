@@ -19,7 +19,7 @@ get_flow_id(exception, Ip) ->
     %% TODO implement properly
     100 + get_flow_id(basic, Ip).
 
-make(Type, Ip, Mask, Gateway) ->
+make(Type, {Ip, Mask}, Port, Gateway) ->
 
     case Type of
         exception ->
@@ -32,8 +32,8 @@ make(Type, Ip, Mask, Gateway) ->
 
     FlowId = get_flow_id(Type, Ip),
 
-    io:format("making flow id(~w) prio(~w) name(~s) ip(~s/~s) sendto(~s)~n",
-              [FlowId, Prio, Name, Ip, Mask, Gateway]),
+    io:format("making flow id(~w) prio(~w) name(~s) ip(~s/~s) port(~p) sendto(~s)~n",
+              [FlowId, Prio, Name, Ip, Mask, Port, Gateway]),
 
     case Gateway of
 	drop ->
@@ -69,6 +69,14 @@ make(Type, Ip, Mask, Gateway) ->
     </instructions>"
     end,
 
+    case Port of
+	noport ->
+	    PortMatch = "";
+	_ ->
+	    PortMatch =
+    "<tcp-source-port>" ++ integer_to_list(Port) ++ "</tcp-source-port>"
+    end,
+
     {FlowId,
 "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>
 <flow xmlns=\"urn:opendaylight:flow:inventory\">
@@ -80,7 +88,8 @@ make(Type, Ip, Mask, Gateway) ->
                 <type>2048</type>
             </ethernet-type>
         </ethernet-match>
-        <ipv4-destination>" ++ Ip ++ "/" ++ Mask ++ "</ipv4-destination>
+        <ipv4-destination>" ++ Ip ++ "/" ++ Mask ++ "</ipv4-destination>"
+     ++ PortMatch ++ "
     </match>
     <id>" ++ integer_to_list(FlowId) ++"</id>
     <table_id>0</table_id>"
