@@ -41,8 +41,8 @@ get_connections() ->
 	      nodeId = 1}].
 
 get_instance_mac(InstanceId) ->
-    lists:flatten(lists:duplicate(5,integer_to_list(InstanceId) ++ ":"))
-	++ integer_to_list(InstanceId).
+    lists:flatten(lists:duplicate(5,"0" ++ integer_to_list(InstanceId) ++ ":"))
+	++ "0" ++ integer_to_list(InstanceId).
 
 
 get_diaconfig() ->

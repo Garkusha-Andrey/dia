@@ -1,6 +1,6 @@
 -module(flows).
 
--export([make/4, defaults/2]).
+-export([make/5, defaults/2]).
 
 -define(FLOW_BASIC_PRIO, 5).
 -define(FLOW_EX_PRIO, 10).
@@ -11,29 +11,30 @@
 -define(PORT_INTERNAL, 2).
 -define(PORT_EXTERNAL, 1).
 
-get_flow_id(basic, Ip) ->
+get_flow_id(basic, Ip, _Port) ->
     %% TODO3 add support for arbitrary chunk number
     {ok, {_,_,_,Id}} = inet:parse_ipv4_address(Ip),
     10 + Id;
-get_flow_id(exception, Ip) ->
+get_flow_id(exception, Ip, Port) ->
     %% TODO implement properly
-    100 + get_flow_id(basic, Ip).
+    {ok, {I1,I2,I3,I4}} = inet:parse_ipv4_address(Ip),
+    100 + I1+I2+I3+I4+Port.
 
-make(Type, {Ip, Mask}, Port, Gateway) ->
+make(Type, DestinationIp, {SourceIp, SourceMask}, Port, Gateway) ->
 
     case Type of
         exception ->
             Prio = ?FLOW_EX_PRIO,
-            Name = ?FLOW_EX_PREFIX ++ Ip;
+            Name = ?FLOW_EX_PREFIX ++ SourceIp ++ integer_to_list(Port);
         basic ->
             Prio = ?FLOW_BASIC_PRIO,
-            Name = ?FLOW_BASIC_PREFIX ++ Ip
+            Name = ?FLOW_BASIC_PREFIX ++ SourceIp
     end,
 
-    FlowId = get_flow_id(Type, Ip),
+    FlowId = get_flow_id(Type, SourceIp, Port),
 
     io:format("making flow id(~w) prio(~w) name(~s) ip(~s/~s) port(~p) sendto(~s)~n",
-              [FlowId, Prio, Name, Ip, Mask, Port, Gateway]),
+              [FlowId, Prio, Name, SourceIp, SourceMask, Port, Gateway]),
 
     case Gateway of
 	drop ->
@@ -73,8 +74,8 @@ make(Type, {Ip, Mask}, Port, Gateway) ->
 	noport ->
 	    PortMatch = "";
 	_ ->
-	    PortMatch =
-    "<tcp-source-port>" ++ integer_to_list(Port) ++ "</tcp-source-port>"
+	    PortMatch = "
+    <tcp-source-port>" ++ integer_to_list(Port) ++ "</tcp-source-port>"
     end,
 
     {FlowId,
@@ -88,12 +89,15 @@ make(Type, {Ip, Mask}, Port, Gateway) ->
                 <type>2048</type>
             </ethernet-type>
         </ethernet-match>
-        <ipv4-destination>" ++ Ip ++ "/" ++ Mask ++ "</ipv4-destination>"
-     ++ PortMatch ++ "
+        <ipv4-destination>"
+            ++ DestinationIp ++
+                 "/255.255.255.255</ipv4-destination>
+        <ipv4-source>" ++ SourceIp ++ "/" ++ SourceMask ++ "</ipv4-source>"
+    ++ PortMatch ++ "
     </match>
     <id>" ++ integer_to_list(FlowId) ++"</id>
     <table_id>0</table_id>"
-++ Instructions ++ "
+    ++ Instructions ++ "
 </flow>
 "}.
 

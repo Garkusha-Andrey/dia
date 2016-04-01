@@ -81,6 +81,7 @@ test_update(_Iteration)->
                                           restconf:flow_send(
                                             flows:make(
                                               basic,
+					      element(1,controller_lib:get_publicIp()),
                                               %% TODO3 add support for
                                               %%       arbitrary chunk number
                                               {"0.0.0." ++
@@ -97,6 +98,7 @@ test_update(_Iteration)->
     lists:foreach(fun(FreeChunk) ->
 			  restconf:flow_send(flows:make(
 					       basic,
+					       element(1,controller_lib:get_publicIp()),
 					       %% TODO3 add support for
 					       %%       arbitrary chunk number
 					       {"0.0.0." ++
@@ -149,6 +151,7 @@ exception_for_connection(Connection, Instances) ->
 			      end, TheInstance#instanceChunks.chunks) of
 		[] ->
 		    flows:make(exception,
+			       element(1,controller_lib:get_publicIp()),
 			       {Connection#servers.ipaddress, ?FULL_MASK},
 			       Connection#servers.port,
 			       controller_lib:get_instance_mac(Connection#servers.nodeId));
