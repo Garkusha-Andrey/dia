@@ -5,4 +5,5 @@
               {applications,[kernel,stdlib]},
               {mod,{dia_app,[]}},
               {env,[]},
-              {modules,[dia_app,dia_sup]}]}.
+              {modules,[client,client_cb,dia_app,dia_sup,node,server,
+                        server_cb]}]}.
