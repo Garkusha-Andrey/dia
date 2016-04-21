@@ -13,7 +13,8 @@
 		 change_configuration/1,
 		 change_configuration/2,
 		 parse_service_config/1,
-		 servers_distribution/0]).
+		 clodify_done/0,
+		 clients_updated/0]).
 
 -include("controller_app.hrl").
 
@@ -25,8 +26,11 @@
 install(Nodes) ->
 	io:format("~nI am in install() for nodes ~p~n",[Nodes]),
 	Res = rpc:multicall(Nodes, application, start, [mnesia]),
+	rpc:multicall(Nodes, application, start, [inets]),
 	io:format("Res is ~p~n",[Res]),
-	ets:new(diaNodes, [set, named_table]),
+	ets:new(diaNodes, [set, named_table, {keypos, 2}, public]),
+	ets:new(sd_table, [set, named_table, {keypos, 2}, public]),
+	ets:new(tbd_table,[set, named_table, {keypos, 2}, public]),
 
 	MnesiaConfig = mnesia:change_config(extra_db_nodes, Nodes),
 	io:format("MnesiaConfig is ~p~n",[MnesiaConfig]),
@@ -86,6 +90,17 @@ install(Nodes) ->
 				TabInfo6 ->
 					io:format("TabInfo is ~p~n",[TabInfo6]),
 					mnesia:add_table_copy(servers, Nodes, ram_copies)
+			end,
+		case catch mnesia:table_info(clients, attributes) of
+				{'EXIT', _} ->
+					Result5 = mnesia:create_table(clients,
+										[{record_name, clients},
+										 {attributes, record_info(fields, clients)},
+										 {ram_copies, Nodes}]),
+					io:format("Result5 is ~p~n",[Result5]);
+				TabInfo7 ->
+					io:format("TabInfo7 is ~p~n",[TabInfo7]),
+					mnesia:add_table_copy(clients, Nodes, ram_copies)
 			end;
 		_ ->
 			do_nothing
@@ -100,8 +115,7 @@ install(Nodes) ->
 	| {ok, Pid :: pid(), State :: term()}
 	| {error, Reason :: term()}.
 %% ====================================================================
- start({failover, Node}, _Args) ->
-	io:format("I am in takeover for the node ~p~n",[Node]),
+ start({failover, _Node}, _Args) ->
 	case application:get_application(mnesia) of
 		undefined ->
 			application:start(mnesia);
@@ -114,11 +128,11 @@ install(Nodes) ->
 	parse_service_config("../src/service_config"),
     controller_sub:start_link();
 start(normal, []) ->
-%	routing:init(),
 	io:format("~n Before install!!! ~n"),
 	Nodes = [node()| nodes()],
 	install(Nodes),
 	wait_for_tables(),
+	parse_service_config("../src/service_config"),
     controller_sub:start_link();
 start({takeover, OtherNode}, []) ->
 	io:format("I am in takeover for the node ~p~n",[OtherNode]),
@@ -131,6 +145,7 @@ start({takeover, OtherNode}, []) ->
 	Nodes = [node()| nodes()],
 	install(Nodes),
 	wait_for_tables(),
+	parse_service_config("../src/service_config"),
     controller_sub:start_link().
 
 %% stop/1
@@ -139,7 +154,6 @@ start({takeover, OtherNode}, []) ->
 -spec stop(State :: term()) ->  Any :: term().
 %% ====================================================================
 stop(_State) ->
-	io:format("I am in stop~n"),
 	%Nodes = [node() | nodes()],
 	%mnesia:delete_schema(Nodes),
     ok.
@@ -155,25 +169,22 @@ change_configuration(diaLocal, Arg) ->
 change_configuration(diaIp, Arg) ->
 	controller_server:change_configuration(diaIp, Arg).
 change_configuration(Args) ->
-	io:format("XKULALE~n"),
 	timer:sleep(5000),
 	controller_server:change_configuration(Args).
 
 wait_for_tables() ->
-	io:format("I am in wait for tables!~n~n"),
-	Res = mnesia:wait_for_tables([diaConnections,
-				      diaLocalConfig,
-				      globalData,
-				      instanceWeight], 
-				     15000),
-	io:format("Res is ~p~n",[Res]).
+	mnesia:wait_for_tables([diaConnections,
+							diaLocalConfig,
+							globalData,
+							instanceWeight,
+							servers,
+							clients], 
+						   15000).
 
 parse_service_config(InputFileName) ->
 	Device = open_file(InputFileName, read),
-    Data = read_lines(Device, []),
-    close_file(Device),
-    io:format("Read ~p lines~n", [length(Data)]),
-	io:format("Lines are ~p~n",[Data]).
+    read_lines(Device, []),
+    close_file(Device).
 
 
 open_file(FileName, Mode) ->
@@ -191,26 +202,28 @@ read_lines(Device, L) ->
 			SL = binary_to_list(String),
 			case lists:member($#, SL) of
 				true ->
-					io:format("It is a comment line: ~p~n",[SL]);
+					%%comment line, skip it:
+					do_nothing;
 				false ->
 					{ok, ItemTokens, _} = erl_scan:string(SL ++ "."),
 					{ok, {RealmId, RealmHost, IpAddress, Port}} = erl_parse:parse_term(ItemTokens),
 					F = fun() ->
-								mnesia:write(#servers{realmId = RealmId,
-													  realmHost = RealmHost,
-													  ipaddress = IpAddress,
-													  port = Port})
+								mnesia:write(#servers{portIpAddr = {Port, IpAddress},
+													  realmId = RealmId,
+													  realmHost = RealmHost})
 						end,
 					mnesia:activity(transaction, F);
 				_ ->
 					do_nothing
 			end,
 			Bin = read_lines(Device, [SL | L]),
-			io:format("String is ~p~n",[SL]),
 			Bin
     end.
 
-servers_distribution() ->
-	io:format("DiaNodes is ~p~n",[ets:tab2list(diaNodes)]).
+
+clodify_done() ->
+	controller_server:initial_distribution().
   
 
+clients_updated() ->
+	controller_server:clients_updated().

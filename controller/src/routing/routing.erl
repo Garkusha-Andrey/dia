@@ -16,7 +16,13 @@
 -define(FULL_MASK, "255.255.255.255").
 
 init()->
-    ets:new(table, [set, named_table]),
+	case ets:info(table) of
+		undefined ->
+			ets:new(table, [set, named_table,public]);
+		_ ->
+			do_nothing
+	end,
+
     ets:insert(table, {instances, []}),
     ets:insert(table, {freeChunks,
 		       [{X,0} || X <- lists:seq(0, ?NUM_CHUNKS-1)]}),
@@ -131,8 +137,8 @@ reset_chunks_owner(Chunks) ->
 %%     for given @Connection, make an exception flow if needed
 %%
 exception_for_connection(Connection, Instances) ->
-    {ok, {_,_,_,Lsb}} = inet:parse_ipv4_address(
-                          Connection#servers.ipaddress),
+	{_Port, IpAddress} = Connection#servers.portIpAddr,
+    {ok, {_,_,_,Lsb}} = inet:parse_ipv4_address(IpAddress),
     Chunk = Lsb band (?NUM_CHUNKS-1),
 
     %%io:format("Connection ~p Chunk ~p Instances ~p~n", [Connection, Chunk, Instances]),
@@ -150,10 +156,11 @@ exception_for_connection(Connection, Instances) ->
 				      element(1, InstChunk) == Chunk
 			      end, TheInstance#instanceChunks.chunks) of
 		[] ->
+			{Port, IpAddress} = Connection#servers.portIpAddr,
 		    flows:make(exception,
 			       element(1,controller_lib:get_publicIp()),
-			       {Connection#servers.ipaddress, ?FULL_MASK},
-			       Connection#servers.port,
+			       {IpAddress, ?FULL_MASK},
+			       Port,
 			       controller_lib:get_instance_mac(Connection#servers.nodeId));
 		_ ->
 		    noflow
@@ -188,7 +195,7 @@ update_weights(InstanceList, Weights) ->
 int_update_weights(OldInstanceList, [Weight | RWeights],
                  NewInstanceList, PrevTotalWeight) ->
     CompareFunc = fun(Instance) ->
-                Instance#instanceChunks.id == Weight#instanceWeight.diaInstanceId
+                Instance#instanceChunks.id == Weight#instanceWeight.dianodeId
                   end,
 
     TotalWeight = PrevTotalWeight + Weight#instanceWeight.weight,
@@ -197,7 +204,7 @@ int_update_weights(OldInstanceList, [Weight | RWeights],
         [] ->
 	    %% no such ID in the old instance list (new instance booted) - add
 	    ExistingInstance = null,
-            NewInstance = #instanceChunks{id=Weight#instanceWeight.diaInstanceId,
+            NewInstance = #instanceChunks{id=Weight#instanceWeight.dianodeId,
                                           weight=Weight#instanceWeight.weight};
 
         [ExistingInstance] ->
