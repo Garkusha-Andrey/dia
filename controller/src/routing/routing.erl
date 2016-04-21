@@ -1,8 +1,8 @@
 -module(routing).
 
 -export([init/0, update/0,
-	%% for test
-	 test_update/1]).
+        %% for test
+         test_update/1]).
 
 -include("../controller_app.hrl").
 
@@ -16,16 +16,16 @@
 -define(FULL_MASK, "255.255.255.255").
 
 init()->
-	case ets:info(table) of
-		undefined ->
-			ets:new(table, [set, named_table,public]);
-		_ ->
-			do_nothing
-	end,
+        case ets:info(table) of
+                undefined ->
+                        ets:new(table, [set, named_table,public]);
+                _ ->
+                        do_nothing
+        end,
 
     ets:insert(table, {instances, []}),
     ets:insert(table, {freeChunks,
-		       [{X,0} || X <- lists:seq(0, ?NUM_CHUNKS-1)]}),
+                       [{X,0} || X <- lists:seq(0, ?NUM_CHUNKS-1)]}),
 
     restconf:table_delete(0),
 
@@ -33,15 +33,15 @@ init()->
     {IpExt, MaskExt} = controller_lib:get_publicIp(),
 
     lists:foreach(fun(A) -> restconf:flow_send(A) end,
-		  flows:defaults(arp,
-				[IpInt,MaskInt,
-				 IpExt,MaskExt])),
+                  flows:defaults(arp,
+                                [IpInt,MaskInt,
+                                 IpExt,MaskExt])),
 
     lists:foreach(fun(A) -> restconf:flow_send(A) end,
-		  flows:defaults(ip,
-				[IpInt,IpExt,
-				 controller_lib:get_ovsMac(),
-				 controller_lib:get_extGwMac()])),
+                  flows:defaults(ip,
+                                [IpInt,IpExt,
+                                 controller_lib:get_ovsMac(),
+                                 controller_lib:get_extGwMac()])),
 
     update().
 
@@ -64,8 +64,8 @@ test_update(_Iteration)->
     {Instances3, FreeChunks2} = take_chunks(Instances2, FreeChunks),
     %% remove instances with weight 0
     Instances4 = lists:filter(fun(Instance) ->
-				      Instance#instanceChunks.weight /= 0
-			      end, Instances3),
+                                      Instance#instanceChunks.weight /= 0
+                              end, Instances3),
     io:format("chunks taken; ~w~nFree: ~w~n", [Instances4, FreeChunks2]),
     {Instances5, FreeChunks3} = give_chunks(Instances4, FreeChunks2),
     io:format("chunks given; ~w~nFree: ~w~n", [Instances5, FreeChunks3]),
@@ -87,34 +87,34 @@ test_update(_Iteration)->
                                           restconf:flow_send(
                                             flows:make(
                                               basic,
-					      element(1,controller_lib:get_publicIp()),
+                                              element(1,controller_lib:get_publicIp()),
                                               %% TODO3 add support for
                                               %%       arbitrary chunk number
                                               {"0.0.0." ++
-					       integer_to_list(
-						 element(1,Chunk)),
-					       "0.0.0." ++
-					       integer_to_list(?NUM_CHUNKS-1)},
-					      noport,
+                                               integer_to_list(
+                                                 element(1,Chunk)),
+                                               "0.0.0." ++
+                                               integer_to_list(?NUM_CHUNKS-1)},
+                                              noport,
                        controller_lib:get_instance_mac(Instance#instanceChunks.id)))
                                   end, Instance#instanceChunks.chunks)
                   end, Instances5),
 
     %% remove obsolete basic flows (if no instances are alive)
     lists:foreach(fun(FreeChunk) ->
-			  restconf:flow_send(flows:make(
-					       basic,
-					       element(1,controller_lib:get_publicIp()),
-					       %% TODO3 add support for
-					       %%       arbitrary chunk number
-					       {"0.0.0." ++
-						integer_to_list(
-						  element(1,FreeChunk)),
-						"0.0.0." ++
-						integer_to_list(?NUM_CHUNKS-1)},
-					       noport,
-					       drop))
-		  end, FreeChunks3),
+                          restconf:flow_send(flows:make(
+                                               basic,
+                                               element(1,controller_lib:get_publicIp()),
+                                               %% TODO3 add support for
+                                               %%       arbitrary chunk number
+                                               {"0.0.0." ++
+                                                integer_to_list(
+                                                  element(1,FreeChunk)),
+                                                "0.0.0." ++
+                                                integer_to_list(?NUM_CHUNKS-1)},
+                                               noport,
+                                               drop))
+                  end, FreeChunks3),
 
     %% SAVE
     ets:insert(table, {instances, Instances5}),
@@ -137,34 +137,34 @@ reset_chunks_owner(Chunks) ->
 %%     for given @Connection, make an exception flow if needed
 %%
 exception_for_connection(Connection, Instances) ->
-	{_Port, IpAddress} = Connection#servers.portIpAddr,
+    {_Port, IpAddress} = Connection#servers.portIpAddr,
     {ok, {_,_,_,Lsb}} = inet:parse_ipv4_address(IpAddress),
     Chunk = Lsb band (?NUM_CHUNKS-1),
 
     %%io:format("Connection ~p Chunk ~p Instances ~p~n", [Connection, Chunk, Instances]),
     FilteredInstances = lists:filter(fun(Instance) ->
-					     Instance#instanceChunks.id == Connection#servers.nodeId
-				     end, Instances),
+                                             Instance#instanceChunks.id == Connection#servers.nodeId
+                                     end, Instances),
     case FilteredInstances of
-	[] ->
-	    %% no such instance in our list. strange but ok
-	    noflow;
+        [] ->
+            %% no such instance in our list. strange but ok
+            noflow;
 
-	[TheInstance] ->
-	    %% normal case, one instance with this ID
-	    case lists:filter(fun(InstChunk) ->
-				      element(1, InstChunk) == Chunk
-			      end, TheInstance#instanceChunks.chunks) of
-		[] ->
-			{Port, IpAddress} = Connection#servers.portIpAddr,
-		    flows:make(exception,
-			       element(1,controller_lib:get_publicIp()),
-			       {IpAddress, ?FULL_MASK},
-			       Port,
-			       controller_lib:get_instance_mac(Connection#servers.nodeId));
-		_ ->
-		    noflow
-	    end
+        [TheInstance] ->
+            %% normal case, one instance with this ID
+            case lists:filter(fun(InstChunk) ->
+                                      element(1, InstChunk) == Chunk
+                              end, TheInstance#instanceChunks.chunks) of
+                [] ->
+                    {Port, IpAddress} = Connection#servers.portIpAddr,
+                    flows:make(exception,
+                               element(1,controller_lib:get_publicIp()),
+                               {IpAddress, ?FULL_MASK},
+                               Port,
+                               controller_lib:get_instance_mac(Connection#servers.nodeId));
+                _ ->
+                    noflow
+            end
          %% several instances with this ID is definitely not ok
     end.
 
@@ -181,13 +181,13 @@ update_weights(InstanceList, Weights) ->
 
     %% reset all weights
     InstanceList2 = lists:map(fun(Instance) ->
-		   #instanceChunks{
-		     id=Instance#instanceChunks.id,
-		     weight=0,
-		     chunks=Instance#instanceChunks.chunks,
-		     chunks_n=Instance#instanceChunks.chunks_n,
+                   #instanceChunks{
+                     id=Instance#instanceChunks.id,
+                     weight=0,
+                     chunks=Instance#instanceChunks.chunks,
+                     chunks_n=Instance#instanceChunks.chunks_n,
                      chunks_diff=Instance#instanceChunks.chunks_diff}
-			   end, InstanceList),
+                           end, InstanceList),
 
     %%iterate through weights and update instances
     int_update_weights(InstanceList2, Weights, [], 0).
@@ -202,13 +202,13 @@ int_update_weights(OldInstanceList, [Weight | RWeights],
 
     case lists:filter(CompareFunc, OldInstanceList) of
         [] ->
-	    %% no such ID in the old instance list (new instance booted) - add
-	    ExistingInstance = null,
+            %% no such ID in the old instance list (new instance booted) - add
+            ExistingInstance = null,
             NewInstance = #instanceChunks{id=Weight#instanceWeight.dianodeId,
                                           weight=Weight#instanceWeight.weight};
 
         [ExistingInstance] ->
-	    %% such ID already in the old instance list, just update weight
+            %% such ID already in the old instance list, just update weight
             NewInstance = #instanceChunks{
               id=ExistingInstance#instanceChunks.id,
               weight=Weight#instanceWeight.weight,
@@ -218,16 +218,16 @@ int_update_weights(OldInstanceList, [Weight | RWeights],
     end,
 
     case ExistingInstance of
-	null ->
-	    int_update_weights(OldInstanceList, RWeights,
-				 [NewInstance|NewInstanceList], TotalWeight);
-	_ ->
-	    %% the instance that we copied to new instance list,
-	    %%  has to be removed from the old instance list
-	    int_update_weights(lists:delete(ExistingInstance,
-					      OldInstanceList),
-				 RWeights,
-				 [NewInstance|NewInstanceList], TotalWeight)
+        null ->
+            int_update_weights(OldInstanceList, RWeights,
+                                 [NewInstance|NewInstanceList], TotalWeight);
+        _ ->
+            %% the instance that we copied to new instance list,
+            %%  has to be removed from the old instance list
+            int_update_weights(lists:delete(ExistingInstance,
+                                              OldInstanceList),
+                                 RWeights,
+                                 [NewInstance|NewInstanceList], TotalWeight)
     end;
 
 %% now we have iterated through all weights and
@@ -245,13 +245,13 @@ int_update_weights(DeletedInstances, [], [], 0) ->
 
 int_update_weights(DeletedInstances, [], NewInstanceList, TotalWeight) ->
     lists:map(fun(Instance) ->
-		      #instanceChunks{
-		   id=Instance#instanceChunks.id,
-		   weight=Instance#instanceChunks.weight / TotalWeight,
-		   chunks=Instance#instanceChunks.chunks,
-		   chunks_n=Instance#instanceChunks.chunks_n,
-		   chunks_diff=Instance#instanceChunks.chunks_diff}
-	      end, DeletedInstances ++ lists:reverse(NewInstanceList)).
+                      #instanceChunks{
+                   id=Instance#instanceChunks.id,
+                   weight=Instance#instanceChunks.weight / TotalWeight,
+                   chunks=Instance#instanceChunks.chunks,
+                   chunks_n=Instance#instanceChunks.chunks_n,
+                   chunks_diff=Instance#instanceChunks.chunks_diff}
+              end, DeletedInstances ++ lists:reverse(NewInstanceList)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
@@ -287,13 +287,13 @@ int_update_chunk_n([Instance|OldInstanceList], SharedChunks, NewInstanceList) ->
     Chunks_n = trunc(Instance#instanceChunks.weight * ?NUM_CHUNKS),
     Chunks_diff = Chunks_n - Instance#instanceChunks.chunks_n,
     NewInstance = #instanceChunks{id=Instance#instanceChunks.id,
-				      weight=Instance#instanceChunks.weight,
-				      chunks=Instance#instanceChunks.chunks,
-				      chunks_n=Chunks_n,
-				      chunks_diff=Chunks_diff},
+                                      weight=Instance#instanceChunks.weight,
+                                      chunks=Instance#instanceChunks.chunks,
+                                      chunks_n=Chunks_n,
+                                      chunks_diff=Chunks_diff},
 
     int_update_chunk_n(OldInstanceList, SharedChunks + Chunks_n,
-		       [NewInstance|NewInstanceList]);
+                       [NewInstance|NewInstanceList]);
 
 %% all the chunks were shared by the basic share function
 int_update_chunk_n([], ?NUM_CHUNKS, InstanceList) ->
@@ -303,9 +303,9 @@ int_update_chunk_n([], ?NUM_CHUNKS, InstanceList) ->
 %%   share to instances with the larger "remaining weight"
 int_update_chunk_n([], SharedChunks, InstanceList) ->
     SortedInstanceList = lists:sort(fun(A,B) ->
-			trunc_h(A#instanceChunks.weight * ?NUM_CHUNKS) >
-			trunc_h(B#instanceChunks.weight * ?NUM_CHUNKS)
-				    end, InstanceList),
+                        trunc_h(A#instanceChunks.weight * ?NUM_CHUNKS) >
+                        trunc_h(B#instanceChunks.weight * ?NUM_CHUNKS)
+                                    end, InstanceList),
     extra_share(SortedInstanceList, SharedChunks, []).
 
 %% extra_share is done
@@ -314,7 +314,7 @@ extra_share(OldInstanceList, ?NUM_CHUNKS, NewInstanceList) ->
 
 %% remaining weights are 0 - done
 extra_share([Instance= #instanceChunks{}|OldInstanceList],
-	    SharedChunks, NewInstanceList)
+            SharedChunks, NewInstanceList)
   when Instance#instanceChunks.weight == 0 ->
     %% no chunks could have been shared
     0 = SharedChunks,
@@ -323,10 +323,10 @@ extra_share([Instance= #instanceChunks{}|OldInstanceList],
 %% add 1 chunk to instance
 extra_share([Instance|OldInstanceList], SharedChunks, NewInstanceList) ->
     NewInstance = #instanceChunks{id=Instance#instanceChunks.id,
-			  weight=Instance#instanceChunks.weight,
-			  chunks=Instance#instanceChunks.chunks,
-			  chunks_n=Instance#instanceChunks.chunks_n+1,
-			  chunks_diff=Instance#instanceChunks.chunks_diff + 1},
+                          weight=Instance#instanceChunks.weight,
+                          chunks=Instance#instanceChunks.chunks,
+                          chunks_n=Instance#instanceChunks.chunks_n+1,
+                          chunks_diff=Instance#instanceChunks.chunks_diff + 1},
 
     extra_share(OldInstanceList, SharedChunks+1, [NewInstance|NewInstanceList]).
 
@@ -342,25 +342,25 @@ take_chunks(InstanceList, FreeChunks) ->
     int_take_chunks(InstanceList, FreeChunks, []).
 
 int_take_chunks([Instance= #instanceChunks{}|OldInstanceList],
-		FreeChunks, NewInstanceList)
+                FreeChunks, NewInstanceList)
                when Instance#instanceChunks.chunks_diff < 0 ->
 
     {Chunks_excess, Chunks} = lists:split(
-				-Instance#instanceChunks.chunks_diff,
-				Instance#instanceChunks.chunks),
+                                -Instance#instanceChunks.chunks_diff,
+                                Instance#instanceChunks.chunks),
 
     Chunks_excess2 =
-	set_chunks_owner(Chunks_excess, Instance#instanceChunks.id),
+        set_chunks_owner(Chunks_excess, Instance#instanceChunks.id),
 
     UpdatedInstance = #instanceChunks{id=Instance#instanceChunks.id,
-				      weight=Instance#instanceChunks.weight,
-				      chunks=Chunks,
-				      chunks_n=Instance#instanceChunks.chunks_n,
-				      chunks_diff=Instance#instanceChunks.chunks_diff},
+                                      weight=Instance#instanceChunks.weight,
+                                      chunks=Chunks,
+                                      chunks_n=Instance#instanceChunks.chunks_n,
+                                      chunks_diff=Instance#instanceChunks.chunks_diff},
 
    int_take_chunks(OldInstanceList,
-		   FreeChunks ++ Chunks_excess2,
-		   [UpdatedInstance|NewInstanceList]);
+                   FreeChunks ++ Chunks_excess2,
+                   [UpdatedInstance|NewInstanceList]);
 
 %% instance has no excess chunks
 int_take_chunks([Instance|OldInstanceList], FreeChunks, NewInstanceList) ->
@@ -393,8 +393,8 @@ int_give_chunks([Instance = #instanceChunks{}|OldInstanceList],
     FMoveChunk = fun(Chunk) ->
         io:format("give_chunks(): chunk(~w) - instance [~w]-->[~w]~n",
                   [element(1,Chunk), element(2, Chunk),
-		   Instance#instanceChunks.id])
-		 end,
+                   Instance#instanceChunks.id])
+                 end,
 
     lists:foreach(FMoveChunk, NewChunks),
 
@@ -404,7 +404,7 @@ int_give_chunks([Instance = #instanceChunks{}|OldInstanceList],
                     chunks_n=Instance#instanceChunks.chunks_n,
                     chunks_diff=0},
     int_give_chunks(OldInstanceList,
-		    NewFreeChunks, [NewInstance|NewInstanceList]);
+                    NewFreeChunks, [NewInstance|NewInstanceList]);
 
 %% instance does not need any more chunks
 int_give_chunks([Instance|OldInstanceList], FreeChunks, NewInstanceList) ->

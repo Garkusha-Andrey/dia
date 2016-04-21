@@ -10,6 +10,11 @@ RUN_SCRIPT="start"
 def usage():
     print "Usage: ./setup_odl.py ODL_ADDRESS_1 ODL_ADDRESS_2 ODL_ADDRESS_3"
 
+if subprocess.call("pgrep java > /dev/null", shell = True) == 0:
+    print "Error: already running!"
+    exit(1)
+
+
 i=0
 me=0
 ips=""
@@ -32,10 +37,12 @@ script = subprocess.check_output("find " + ODL_PATH + " -name " + CONF_SCRIPT,
                                  shell = True)
 
 print "Starting: " + script[:-1] + " " + str(me) + ips
-subprocess.call(script[:-1] + " " + str(me) + ips, shell = True)
+subprocess.call([script[:-1], str(me), ips])
 
 script = subprocess.check_output("find " + ODL_PATH + " -name " + RUN_SCRIPT,
                                  shell = True)
 
 print "Starting ODL: " + script[:-1]
 subprocess.call(script[:-1])
+
+print "Happy end"

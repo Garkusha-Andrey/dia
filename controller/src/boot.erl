@@ -20,6 +20,7 @@ io:format("I am in boot:start()~n"),
 	case application:get_application(controller_app) of
 		undefined ->
 			io:format("Controller App is NOT started!~n"),
+		        application:start(inets),
 			application:start(controller_app);
 		{ok, _Value} ->
 			io:format("Controller App is started!~n")
@@ -31,5 +32,3 @@ start([REnode]) ->
 		_ ->
 			error_logger:error_report("The node ~p could not be connected to node ~p!~n",[node(), REnode])
 	end.	
-
- 
