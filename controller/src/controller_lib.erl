@@ -13,14 +13,19 @@
 		 get_remotePeerIp/1,
 		 get_dianode/1,
 		 get_weight/1,
+
+%% Routing interface
 		 get_ovsIp/0,
 		 get_publicIp/0,
 		 get_ovsMac/0,
 		 get_extGwMac/0,
-		 instance_weights_get/0,
-		 instance_weights_get/1,
+		 list_instance_weights/0,
+		 list_instance_weights_stub/0,
+		 list_instance_weights_stub/1,
 		 get_instance_mac/1,
-		 get_connections/0,
+		 list_connections/0,
+
+
 		 get_localIpandMacIp/1,
 		 get_diaLocalIp/1,
 		 get_diaLocalIpConfig/0,
@@ -51,16 +56,15 @@ get_all_diameters() ->
 		{atomic, ResultOfFun} ->
 			lists:append(ResultOfFun)
 	end.
-get_connections() ->
-    %% xantnef 01/04/2016 temporarily stubbed out
-    %%get_diaconfig().
+
+list_connections() ->
     [#servers{portIpAddr = {50000, "1.2.3.4"},
-	      nodeId = 1}].
+	      nodeId = dia1}].
 
-get_instance_mac(InstanceId) ->
-    lists:flatten(lists:duplicate(5,"0" ++ integer_to_list(InstanceId) ++ ":"))
-	++ "0" ++ integer_to_list(InstanceId).
-
+get_instance_mac(NodeId) ->
+%%    lists:flatten(lists:duplicate(5,"0" ++ integer_to_list(InstanceId) ++ ":"))
+%%	++ "0" ++ integer_to_list(InstanceId).
+    get_diaLocalMacIp(NodeId).
 
 
 get_diaconfig() ->
@@ -200,7 +204,7 @@ get_GlobalData() ->
 				[OsvIp] = mnesia:all_keys(globalData),
 				mnesia:read(globalData, OsvIp)
 		end,
-							  
+
 	Result = mnesia:transaction(F),
 	case Result of
 		{aborted, Reason} ->
@@ -226,10 +230,16 @@ get_extGwMac() ->
 	[GlobalDataRec] = get_GlobalData(),
 	GlobalDataRec#globalData.extGwMac.
 
-instance_weights_get() ->
-        instance_weights_get(2).
+list_instance_weights() ->
+    lists:map(fun(D) ->
+		      #instanceWeight{nodeId=D#diaLocalConfig.nodeId,
+				      weight=100}
+	      end, get_all_diameters()).
 
-instance_weights_get(Iteration) ->
+list_instance_weights_stub() ->
+        list_instance_weights_stub(2).
+
+list_instance_weights_stub(Iteration) ->
 
         case Iteration of
 	    1 ->
@@ -237,23 +247,23 @@ instance_weights_get(Iteration) ->
 	        [];
 	    2 ->
 %% 3 even instances with 8/3 = 2,66 chunks each
-                [#instanceWeight{dianodeId=1, weight=95},
-                 #instanceWeight{dianodeId=2, weight=100},
-                 #instanceWeight{dianodeId=3, weight=100}];
+                [#instanceWeight{nodeId=1, weight=95},
+                 #instanceWeight{nodeId=2, weight=100},
+                 #instanceWeight{nodeId=3, weight=100}];
 	    3 ->
 %% empty instance list with previous instances
 		[];
 	    4 ->
 %% 6 even instances with 8/6 = 1,33 chunks each
-                [#instanceWeight{dianodeId=1, weight=100},
-                 #instanceWeight{dianodeId=2, weight=95},
-                 #instanceWeight{dianodeId=3, weight=100},
-                 #instanceWeight{dianodeId=4, weight=100},
-                 #instanceWeight{dianodeId=5, weight=100},
-                 #instanceWeight{dianodeId=6, weight=100}];
+                [#instanceWeight{nodeId=1, weight=100},
+                 #instanceWeight{nodeId=2, weight=95},
+                 #instanceWeight{nodeId=3, weight=100},
+                 #instanceWeight{nodeId=4, weight=100},
+                 #instanceWeight{nodeId=5, weight=100},
+                 #instanceWeight{nodeId=6, weight=100}];
 	    5 ->
-			[#instanceWeight{dianodeId=2, weight=80},
-			 #instanceWeight{dianodeId=3, weight=20}];
+			[#instanceWeight{nodeId=2, weight=80},
+			 #instanceWeight{nodeId=3, weight=20}];
 	    _ ->
 		  exit(ok)
      end.

@@ -55,7 +55,7 @@ test_update(_Iteration)->
 
 
     %% Weights = dia_stubs:instance_weights_get(Iteration),
-    Weights = controller_lib:instance_weights_get(),
+    Weights = controller_lib:list_instance_weights(),
 
     %% set the new weights
     Instances1 = update_weights(Instances, Weights),
@@ -77,7 +77,7 @@ test_update(_Iteration)->
     lists:foreach(fun(Connection) ->
                           restconf:flow_send(
                             exception_for_connection(Connection, Instances5))
-                  end, controller_lib:get_connections()),
+                  end, controller_lib:list_connections()),
 
     %% TODO remove obsolete exceptions
 
@@ -195,7 +195,7 @@ update_weights(InstanceList, Weights) ->
 int_update_weights(OldInstanceList, [Weight | RWeights],
                  NewInstanceList, PrevTotalWeight) ->
     CompareFunc = fun(Instance) ->
-                Instance#instanceChunks.id == Weight#instanceWeight.dianodeId
+                Instance#instanceChunks.id == Weight#instanceWeight.nodeId
                   end,
 
     TotalWeight = PrevTotalWeight + Weight#instanceWeight.weight,
@@ -204,7 +204,7 @@ int_update_weights(OldInstanceList, [Weight | RWeights],
         [] ->
             %% no such ID in the old instance list (new instance booted) - add
             ExistingInstance = null,
-            NewInstance = #instanceChunks{id=Weight#instanceWeight.dianodeId,
+            NewInstance = #instanceChunks{id=Weight#instanceWeight.nodeId,
                                           weight=Weight#instanceWeight.weight};
 
         [ExistingInstance] ->
