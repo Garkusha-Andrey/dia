@@ -20,7 +20,6 @@
          cast/1,      %% send using the list encoding and detached
          stop/1]).    %% stop a service
 		 
-
 -define(DEF_SVC_NAME, ?MODULE).
 -define(CALLBACK_MOD, client_cb).
 -define(L, atom_to_list).
@@ -39,7 +38,7 @@
                                        {module, ?CALLBACK_MOD}]}]).
 %% deploy/1
 %% deploy([<Name>, <Ralm>, <local IP>, <remote IP>, <Port>])
-%% deploy([c1, 'ex.ru', {127,0,0,1}, {127,0,0,1}, 3912]).
+%% deploy([c1, 'ex.ru', {127,0,0,1}, {127,0,0,1}, 3911]).
 deploy(T) ->
 	Name = lists:nth(1, T),
 	Realm = lists:nth(2, T),
@@ -48,9 +47,8 @@ deploy(T) ->
 	Port = lists:nth(5, T),
 
     diameter:start(),
-    start(Name, Realm),
-    connect(Name, {tcp, LIp, RIp, Port})
-	.
+	start(Name, Realm),
+    connect(Name, {tcp, LIp, RIp, Port}).
 
 %% start/2
 start(Name, Realm)
@@ -85,19 +83,19 @@ call(Name, rar) ->
 %% Send defined message to server (like RAR)
 call(Name, user) ->
     SId = diameter:session_id(?L(Name)),
-	Header = #diameter_header{hop_by_hop_id = 123},
+	%%Header = #diameter_header{hop_by_hop_id = 123},
     RAR = #diameter_base_RAR{'Session-Id' = SId,
                              'Auth-Application-Id' = 0,
                              'Re-Auth-Request-Type' = 0},
 	
-	RAR_packet = #diameter_packet{header = Header,
+	RAR_packet = #diameter_packet{%%header = Header,
 								  msg = RAR},
 	
 	io:format("client.erl::call(Name)~n SId: ~s\n", [SId]),
     diameter:call(Name, common, RAR_packet, []).
 
-%% cast/1
 
+%% cast/1
 cast(Name) ->
     SId = diameter:session_id(?L(Name)),
     RAR = ['RAR', {'Session-Id', SId},
