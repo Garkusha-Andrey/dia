@@ -9,7 +9,7 @@
 %% @doc Record for local IP addresses of diameter instances (how local instances seek for each other)
 -record(diaLocalConfig, {nodeId=undefined,
 			 ipAddress = undefined,
-			 macIpAddress = undeifned}).
+			 macAddress = undefined}).
 
 %% @doc Record for the pre-defined parameters
 -record(globalData, {ovsIpMask     = {undefined, undefined}, %% {"Backplane IP", "Backplane IP Mask"}

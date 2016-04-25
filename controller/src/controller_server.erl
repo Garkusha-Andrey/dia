@@ -100,13 +100,13 @@ handle_call(_Call, _From, State) ->
 	NewState :: term(),
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
-handle_cast({new_config,[diameter, Enode, LocalIp, MacLocalIp]}, State) ->
+handle_cast({new_config,[diameter, Enode, LocalIp, LocalMac]}, State) ->
 
 	F = fun() ->
 		mnesia:write(#diaConnections{nodeId = Enode}),
 		mnesia:write(#diaLocalConfig{nodeId = Enode, 
-									 ipAddress = LocalIp,
-									  macIpAddress = MacLocalIp})		
+					     ipAddress = LocalIp,
+					     macAddress = LocalMac})		
     end,
     mnesia:activity(transaction, F),
 	{noreply, State};
