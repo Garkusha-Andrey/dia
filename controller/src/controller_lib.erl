@@ -19,10 +19,10 @@
          get_publicIp/0,
          get_ovsMac/0,
          get_extGwMac/0,
+         get_instance_mac/1,
          list_instance_weights/0,
          list_instance_weights_stub/0,
          list_instance_weights_stub/1,
-         get_instance_mac/1,
          list_connections/0,
 
 
@@ -35,7 +35,7 @@
          delete_server_info/1,
          delete_session_data/1,
          get_servers_config/0,
-         get_all_servers/0,
+         list_servers/0,
          get_servers_per_node/1,
          store_procId/2,
          store_server_procId/3,
@@ -58,8 +58,14 @@ get_all_diameters() ->
     end.
 
 list_connections() ->
-    [#servers{portIpAddr = {50000, "1.2.3.4"},
-              nodeId = dia1}].
+    lists:map(fun(S) ->
+		      #clients{portIpAddr = S#servers.portIpAddr,
+			       nodeId = S#servers.nodeId}
+	      end, list_servers())
+	++ list_clients().
+
+    %%[#servers{portIpAddr = {50000, "1.2.3.4"},
+    %%          nodeId = dia1}].
 
 get_instance_mac(NodeId) ->
 %%    lists:flatten(lists:duplicate(5,"0" ++ integer_to_list(InstanceId) ++ ":"))
@@ -201,8 +207,8 @@ get_diaLocalMac(NodeId) ->
 
 get_GlobalData() ->
     F = fun() ->
-                [OsvIp] = mnesia:all_keys(globalData),
-                mnesia:read(globalData, OsvIp)
+                [OvsIp] = mnesia:all_keys(globalData),
+                mnesia:read(globalData, OvsIp)
         end,
     Result = mnesia:transaction(F),
     case Result of
@@ -269,7 +275,7 @@ list_instance_weights_stub(Iteration) ->
 
 delete(Node) ->
     delete_diaconnections(Node),
-    delete_diaLocalCoonfig(Node),
+    delete_diaLocalConfig(Node),
     delete_from_servers(Node).
 
 delete_from_servers(Node) ->
@@ -310,7 +316,7 @@ delete_diaconnections(Node) ->
             lists:append(ResultOfFun)
     end.
 
-delete_diaLocalCoonfig(Node) ->
+delete_diaLocalConfig(Node) ->
     F = fun() ->
                 Nodes = mnesia:all_keys(diaLocalConfig),
                 lists:map(fun(#diaLocalConfig{nodeId = NodeId} = Elem) when NodeId == Node ->                                                   
@@ -436,7 +442,7 @@ delete_server_info(Node) ->
 get_servers_config() ->
     mnesia:lock({table, server}, read).
 
-get_all_servers() ->
+list_servers() ->
     F = fun() ->
                 PortIp = mnesia:all_keys(servers),
                 RecordList  = lists:foldl(fun(Elem, Acc) ->
@@ -519,7 +525,8 @@ store_server_procId(Port, IpAddress, ProcessId) ->
 
 store_client_port_ipadd(Port, IpAddress, NodeId) ->
     F = fun() ->
-                mnesia:write(#clients{portIpAddr = {Port, IpAddress}, nodeId = NodeId})
+                mnesia:write(#clients{portIpAddr = {Port, IpAddress},
+				      nodeId = NodeId})
         end,
     mnesia:activity(transaction, F).
 
@@ -529,6 +536,24 @@ delete_client_port_ipaddr(Port, IpAddress) ->
                 mnesia:delete_object(ClientRecord)
         end,
     mnesia:activity(transaction, F).
+
+list_clients() ->
+    F = fun() ->
+                lists:map(fun(Key) ->
+				  mnesia:read(clients, Key)
+			  end, mnesia:all_keys(clients))
+        end,
+    check_transaction(mnesia:transaction(F), "Failed to get clients").
+
+
+check_transaction(Result, ErrMsg) ->
+    case Result of
+        {aborted, Reason} ->
+            error_logger:error_report("ERROR: ~s. Reason: ~p~n",
+				      [ErrMsg, Reason]);
+        {atomic, Data} ->
+            Data
+    end.
 
 %% ====================================================================
 %% Internal functions

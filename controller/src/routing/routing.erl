@@ -137,13 +137,13 @@ reset_chunks_owner(Chunks) ->
 %%     for given @Connection, make an exception flow if needed
 %%
 exception_for_connection(Connection, Instances) ->
-    {_Port, IpAddress} = Connection#servers.portIpAddr,
+    {_Port, IpAddress} = Connection#clients.portIpAddr,
     {ok, {_,_,_,Lsb}} = inet:parse_ipv4_address(IpAddress),
     Chunk = Lsb band (?NUM_CHUNKS-1),
 
     %%io:format("Connection ~p Chunk ~p Instances ~p~n", [Connection, Chunk, Instances]),
     FilteredInstances = lists:filter(fun(Instance) ->
-                                             Instance#instanceChunks.id == Connection#servers.nodeId
+                                             Instance#instanceChunks.id == Connection#clients.nodeId
                                      end, Instances),
     case FilteredInstances of
         [] ->
@@ -156,12 +156,12 @@ exception_for_connection(Connection, Instances) ->
                                       element(1, InstChunk) == Chunk
                               end, TheInstance#instanceChunks.chunks) of
                 [] ->
-                    {Port, IpAddress} = Connection#servers.portIpAddr,
+                    {Port, IpAddress} = Connection#clients.portIpAddr,
                     flows:make(exception,
                                element(1,controller_lib:get_publicIp()),
                                {IpAddress, ?FULL_MASK},
                                Port,
-                               controller_lib:get_instance_mac(Connection#servers.nodeId));
+                               controller_lib:get_instance_mac(Connection#clients.nodeId));
                 _ ->
                     noflow
             end
