@@ -4,17 +4,14 @@
 -include_lib("diameter/include/diameter.hrl").
 -include_lib("diameter/include/diameter_gen_base_rfc6733.hrl").
 
+
 %% ====================================================================
 %% API functions
 %% ====================================================================
-%export([deploy/1,
-%		start/2,    %% start a service
-%        start/3,    %%
-%        listen/2,   %% add a listening transport
-%        stop/1]).   %% stop a service
-
 -export([deploy/1,
 		stop/1]).
+
+-export([init/1]).
 
 -define(DEF_SVC_NAME, ?MODULE).
 -define(IRELAY_CALLBACK_MOD, i_relay_cb).
@@ -31,8 +28,13 @@
                                        {dictionary, diameter_gen_base_rfc6733},
                                        {module, ?IRELAY_CALLBACK_MOD}]}]).
 
-%% deploy/1
-%% deploy([<Name>, <Ralm>, <IP>, <Port>])
+-define(LISTENER_PROCESS, irelay_l).
+
+init(NodeName) ->
+	ets:new(next_hope, [set, named_table]),
+	ets:insert(next_hope, {active, NodeName, ?LISTENER_PROCESS}).
+
+%% deploy/1 ([<Name>, <Ralm>, <IP>, <Port>])
 %% deploy([or1, 'ex.ru', {127,0,0,1}, 3911]).
 deploy(T) ->
     Name = lists:nth(1, T),

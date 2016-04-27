@@ -7,6 +7,7 @@
 -include_lib("diameter/include/diameter_gen_base_rfc6733.hrl").
 
 -include_lib("../../controller/src/controller_app.hrl").
+-include_lib("dia_relay_common.hrl").
 
 %% ====================================================================
 %% API functions
@@ -20,13 +21,10 @@
          handle_error/4,
          handle_request/3]).
 
-%% irelay specific
-%%-export().
 
 -define(UNEXPECTED, erlang:error({unexpected, ?MODULE, ?LINE})).
 
--record(orelay, {process_name,
-				 node_name		}).
+-define(LISTENER_PROCESS, irelay_l).
 
 %% ====================================================================
 %% Callback implementation
@@ -127,9 +125,12 @@ rc(_) ->
 
 pass_to_orelay(Pkt = #diameter_packet{}, Caps = #diameter_caps{}) ->
 	io:fwrite("i_relay_cb::pass_to_orelay ~n"),
+	ListenerProcess = 'create_procee_name',
+	register(ListenerProcess, self()),
+	
 	ORelay = lookup_orelay(Pkt, Caps, stub),
-	send_reques_to_orelay(ORelay, Pkt),
-	register(way_back, self()),
+	send_reques_to_orelay(ListenerProcess, ORelay, Pkt),
+	
 	AnswerPkt = wait_for_orelay_answer(),
 	AnswerPkt;
 pass_to_orelay(_Pkt, _Caps) ->
@@ -138,30 +139,35 @@ pass_to_orelay(_Pkt, _Caps) ->
 
 %% lookup_relay_outbound/1
 lookup_orelay(#diameter_packet{msg = _Req}, Caps) ->
-	#diameter_caps{origin_host = {OH,_},
-                   origin_realm = {OR,_}}
+	#diameter_caps{ origin_host = {OH,_},
+                   	origin_realm = {OR,_}}
         = Caps,
 	
 	Controller = get_controller_node_name(),
 	Server = rpc:call(Controller, controller_lib, get_server_by_host_realm, [OH, OR]),
 		
-	ORelay = #orelay{node_name = Server#servers.nodeId,
-			process_name = Server#servers.processId},
-
-	ORelay;
+	#relay{ node_name = Server#servers.nodeId,
+			process_name = Server#servers.processId};
 
 lookup_orelay(_Pkt, _Caps) ->
 	io:fwrite("ERROR: Something goes wrong! lookup_relay_outbound() didn't parse message ~n").
 
 lookup_orelay(#diameter_packet{msg = _Req}, _Caps, stub) ->
-	#orelay{process_name = irelay_l,
-			node_name = 'or1@agarkush-VirtualBox'}.
+	[{active, NodeName, ProcessName}] = ets:lookup(next_hope, active),
+	io:fwrite("I`ve chosen a orelay: ~w ~w ~n", [NodeName, ProcessName]),
+	
+	#relay{ process_name = ProcessName,
+			node_name 	 = NodeName}.
 
 
-%% send_reques_to_orelay/2
-send_reques_to_orelay(#orelay{process_name = ProcessName, node_name = NodeName},
-					  #diameter_packet{msg = _Req} = Pkt) ->
-	{ProcessName, NodeName} ! {payload_request_to_irelay, Pkt},
+%% send_reques_to_orelay/3
+send_reques_to_orelay(ListenerProcess,
+					  #relay{ process_name = ProcessName, node_name = NodeName},
+					  #diameter_packet{} = Pkt) ->
+	Request = #payload_request{direction = 'to_orelay',
+							   src_node_name = node(),
+							   rcv_process_name = ListenerProcess},
+	{ProcessName, NodeName} ! {Request, Pkt},
 	ok.
 
 

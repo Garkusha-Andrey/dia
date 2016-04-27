@@ -7,15 +7,22 @@
 -include_lib("diameter/include/diameter.hrl").
 -include_lib("diameter/include/diameter_gen_base_rfc6733.hrl").
 
+-include_lib("dia_relay_common.hrl").
+
 %% ====================================================================
 %% API functions
 %% ====================================================================
+%-export([deploy/1,
+%		 start/2,     %% start a service
+%         start/3,     %%
+%         connect/2,   %% add a connecting transport
+%         call/2,      %% send using the record encoding
+%         cast/1,      %% send using the list encoding and detached
+%         stop/1]).    %% stop a service
+
+-export([init/0]).
+
 -export([deploy/1,
-		 start/2,     %% start a service
-         start/3,     %%
-         connect/2,   %% add a connecting transport
-         call/2,      %% send using the record encoding
-         cast/1,      %% send using the list encoding and detached
          stop/1]).    %% stop a service
 		 
 %% special for orelay
@@ -26,12 +33,8 @@
 -define(IRELAY_CALLBACK_MOD, o_relay_cb).
 -define(L, atom_to_list).
 
--record(irelay, {process_name,
-				 node_name		}).
+-define(LISTENER_PROCESS, irelay_l).
 
-%% The service configuration. As in the server example, a client
-%% supporting multiple Diameter applications may or may not want to
-%% configure a common callback module on all applications.
 -define(SERVICE(HostName, Realm),
 						[{'Origin-Host', ?L(HostName) ++ "." ++ ?L(Realm)},
                         {'Origin-Realm', ?L(Realm)},
@@ -41,8 +44,16 @@
                         {application, [{alias, common},
                                        {dictionary, diameter_gen_base_rfc6733},
                                        {module, ?IRELAY_CALLBACK_MOD}]}]).
-%% deploy/1
-%% deploy([<Name>, <Ralm>, <local IP>, <remote IP>, <Port>])
+
+%% ====================================================================
+%% API functions
+%% ====================================================================
+
+init() ->
+	ets:new(next_hope_relay, [end_to_end, node_name, process_id]),
+	ok.
+
+%% deploy/1 ([<Name>, <Ralm>, <local IP>, <remote IP>, <Port>])
 %% deploy([c1, 'ex.ru', {127,0,0,1}, {127,0,0,1}, 3911]).
 deploy(T) ->
 	Name = lists:nth(1, T),
@@ -124,13 +135,13 @@ stop(Name) ->
 %% ====================================================================
 irelay_listener(Name) ->
 	io:fwrite("Start of irelay_listener ~n"),
-	register(irelay_l, spawn(?MODULE, listen_for_request, [Name])),
+	register(?LISTENER_PROCESS, spawn(?MODULE, listen_for_request, [Name])),
 	ok.
 
 listen_for_request(Name) ->
 	io:fwrite("Start of listen_for_request ~n"),
 	receive
-		{payload_request_to_irelay, Pkt}
+		{PayloadRequest, Pkt}
 		    when is_record(Pkt, diameter_packet)->
 			io:fwrite("I've got request payload from irelay.~n"
 					  "~p ~n", [Pkt]),
@@ -138,7 +149,10 @@ listen_for_request(Name) ->
 			PreparedPkt		= prepare_pkt(Pkt),
 			{ok, AnswerPkt}	= call(Name, orelay, PreparedPkt),
 
-			IRelay = lookup_for_irelay(AnswerPkt),
+			IRelay = #relay{ node_name = PayloadRequest#payload_request.src_node_name,
+							 process_name = PayloadRequest#payload_request.rcv_process_name },
+			
+			%%IRelay = lookup_for_irelay(AnswerPkt),
 			send_answer_to_irelay(IRelay, AnswerPkt);
 
 		{payload_request_to_irelay, Something} ->
@@ -147,29 +161,27 @@ listen_for_request(Name) ->
 
 		_ ->
 			io:fwrite("WARNING: recaived strange msg. ~n")
-	end.
+	end,
+	
+	listen_for_request(Name).
 
 prepare_pkt(Pkt = #diameter_packet{}) ->
 	Header	= #diameter_header{hop_by_hop_id = Pkt#diameter_packet.header#diameter_header.hop_by_hop_id,
 							   end_to_end_id = Pkt#diameter_packet.header#diameter_header.end_to_end_id},
-	Msg 	= Pkt#diameter_packet.msg,
 
-	PreparedPkt = #diameter_packet{header = Header,
-								   msg = Msg },
-	io:fwrite("Prepare_pk passed successful ~n"),
+	PreparedPkt = #diameter_packet{header 	= Header,
+								   msg		= Pkt#diameter_packet.msg },
+	
 	PreparedPkt.
 
 
-send_answer_to_irelay(IRelay, Pkt = #diameter_packet{}) ->
-	{IRelay#irelay.process_name, IRelay#irelay.node_name} ! Pkt
-	;
-send_answer_to_irelay(_Relay, _Pkt)->
-	io:fwrite("Trying to return something strange ~n").
+send_answer_to_irelay(IRelay = #relay{},
+					  Pkt 	 = #diameter_packet{}) ->
+	io:fwrite("I`m going to send answer to node: ~w ~n"
+			  "process: ~w ~n", [IRelay#relay.node_name, IRelay#relay.process_name]),
+	{IRelay#relay.process_name, IRelay#relay.node_name} ! {payload_answer_from_orelay, Pkt}.
 
 
 lookup_for_irelay(_Pkt = #diameter_packet{}) ->
-	#irelay{ process_name	= way_back,
-			 node_name		= 'ir1@agarkush-VirtualBox'};
-lookup_for_irelay(Something) ->
-	io:fwrite("Strange input for 'lookup_for_irelay' ~n"
-			  "~p ~n", [Something]).
+	#relay{ process_name = way_back,
+			node_name	 = 'ir1@agarkush-VirtualBox'}.
