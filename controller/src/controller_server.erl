@@ -169,10 +169,10 @@ handle_info({nodedown, Node}, State) ->
 	case string:str(NodeL, "diameter") of
 		1 ->
 			ets:delete(diaNodes, Node),
-			BServers = controller_lib:get_all_servers(),
+			BServers = controller_lib:list_servers(),
 			controller_lib:delete(Node),
 			redistribute_servers(),
-			AServers = controller_lib:get_all_servers(),
+			AServers = controller_lib:list_servers(),
 			check_distribution(BServers, AServers),
 			routing:update();
 		0 ->
@@ -318,7 +318,7 @@ get_nodes_from_servers(Nodes) ->
 	
 									  
 initial_servers_distribution() ->
-	DistrServers = controller_lib:get_all_servers(),
+	DistrServers = controller_lib:list_servers(),
 	Servers = case DistrServers of
 				  [] ->
 					  %%Servers do not exist or no any servers distributed:
@@ -334,7 +334,7 @@ initial_servers_distribution() ->
 		_ ->
 			distribute_server_per_node(Servers, Nodes)
 	end,
-	RedistrServers = controller_lib:get_all_servers(),
+	RedistrServers = controller_lib:list_servers(),
 	check_distribution(DistrServers, RedistrServers),
 	routing:update().
 
