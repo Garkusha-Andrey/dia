@@ -7,7 +7,7 @@ Usage: $0 -c1ip=<the first controller instance Ip>  -c2ip=<the second controller
 -c3ip=<the thrid controller instance Ip> [-h]
 
 Example:
-$0 -c1ip='1.2.3.4' -c2ip='2.3.4.5' -cp3ip='3.4.5.6'
+$0 -c1ip='1.2.3.4' -c2ip='2.3.4.5' -c3ip='3.4.5.6'
 
 c1ip parameter specifies the instance where Erlang Controller App will be running;
 c2ip parameter specifies the instance where Erlang Controller App will be takeovered if c1ip 
