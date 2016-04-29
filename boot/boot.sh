@@ -54,6 +54,10 @@ case $i in
     DIAINSTID="${i#*=}"
     shift # past argument=value
     ;;
+    -diaMac=*)
+    DIAMETER_MAC="${i#*=}"
+    shift # past argument=value
+    ;;
     -netIf=*)
     NetIf="${i#*=}"
     shift # past argument=value
@@ -135,7 +139,7 @@ if [ $APPLICATION = "" ]; then
 			echo "boot diam with rnode"
 			DEnode=diameter`echo $DIAINSTID`@`echo $LOCALIP`
 			erl -name $DEnode -s boot start $RNODE -s controller_app change_configuration \
-			diameter $DEnode $LOCALIP $DIAINSTID -setcookie 'ABCD'
+			diameter $DEnode $LOCALIP $DIAMETER_MAC -setcookie 'ABCD'
 		else
 			echo "You need specify the one Controller node to start Diameter instance!\n"
 			usage
@@ -184,7 +188,7 @@ else
 				echo "boot diam with rnode"
 				DEnode=diameter`echo $DIAINSTID`@`echo $LOCALIP`
 				erl -name $DEnode -s boot start $RNODE -s controller_app change_configuration \
-				diameter $DEnode $LOCALIP $DIAINSTID -setcookie 'ABCD'
+				diameter $DEnode $LOCALIP $DIAMETER_MAC -setcookie 'ABCD'
 			else
 				echo "You need specify the one Controller node to start Diameter instance!\n"
 				usage

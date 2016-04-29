@@ -105,8 +105,8 @@ handle_cast({new_config,[diameter, Enode, LocalIp, LocalMac]}, State) ->
 	F = fun() ->
 		mnesia:write(#diaConnections{nodeId = Enode}),
 		mnesia:write(#diaLocalConfig{nodeId = Enode, 
-					     ipAddress = LocalIp,
-					     macAddress = LocalMac})		
+					     ipAddress  = LocalIp,
+					     macAddress = atom_to_list(LocalMac)})
     end,
     mnesia:activity(transaction, F),
 	{noreply, State};
