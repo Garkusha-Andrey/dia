@@ -239,7 +239,7 @@ list_instance_weights() ->
     lists:map(fun(D) ->
                       #instanceWeight{nodeId=D#diaLocalConfig.nodeId,
                                       weight=100}
-              end, get_all_diameters()).
+              end, get_diaLocalIpConfig()).
 
 list_instance_weights_stub() ->
     list_instance_weights_stub(2).
