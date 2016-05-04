@@ -83,7 +83,7 @@ start(Name, Realm, Opts) ->
 connect(Name, T) ->
     Connection = node:connect(Name, T),
 	case Connection of
-		{ok, _}		-> irelay_listener(Name);
+		{ok, _}		-> orelay_listener(Name);
 		{error, _} 	-> io:fwrite("ORelay not connected to server")
 	end
 .
@@ -133,9 +133,10 @@ stop(Name) ->
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
-irelay_listener(Name) ->
-	io:fwrite("Start of irelay_listener ~n"),
-	register(?LISTENER_PROCESS, spawn(?MODULE, listen_for_request, [Name])),
+orelay_listener(Name) ->
+	io:fwrite("Start of orelay_listener ~n"),
+	ListenerProcessName = list_to_atom(lists:concat(["listener_",Name])),
+	register(ListenerProcessName, spawn(?MODULE, listen_for_request, [Name])),
 	ok.
 
 listen_for_request(Name) ->

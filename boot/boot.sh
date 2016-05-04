@@ -133,18 +133,6 @@ if [ $APPLICATION = "" ]; then
 			usage
 			exit 0
 		fi
-	else
-		if [ "$RNODE" != "" ] && [ $DIAINSTID != "" ]
-		then
-			echo "boot diam with rnode"
-			DEnode=diameter`echo $DIAINSTID`@`echo $LOCALIP`
-			erl -name $DEnode -s boot start $RNODE -s controller_app change_configuration \
-			diameter $DEnode $LOCALIP $DIAMETER_MAC -setcookie 'ABCD'
-		else
-			echo "You need specify the one Controller node to start Diameter instance!\n"
-			usage
-			exit 0
-		fi
 	fi
 else
 	if [ "$APPLICATION" = "controller_app" ]; then
@@ -183,12 +171,16 @@ else
 	else
 		if [ "$APPLICATION" = "diameter" ]; then
 			echo "Diameter!"
-			if [ "$RNODE" != "" ] && [ $DIAINSTID != "" ]
+			if [ "$RNODE" != "" ] && [ $DIAINSTID != "" ] && \
+			   [ "$PublicIp" != "" ] && [ $DIAMETER_MAC != "" ]
 			then
 				echo "boot diam with rnode"
 				DEnode=diameter`echo $DIAINSTID`@`echo $LOCALIP`
-				erl -name $DEnode -s boot start $RNODE -s controller_app change_configuration \
-				diameter $DEnode $LOCALIP $DIAMETER_MAC -setcookie 'ABCD'
+				erl -name $DEnode \
+				 -s relay_manager start $PublicIp \
+				 -s boot start $RNODE \
+				 -s controller_app change_configuration \
+				  diameter $DEnode $LOCALIP $DIAMETER_MAC -setcookie 'ABCD'
 			else
 				echo "You need specify the one Controller node to start Diameter instance!\n"
 				usage

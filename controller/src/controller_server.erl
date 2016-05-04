@@ -373,12 +373,14 @@ store_nodeId(Server, NodeId) ->
 		end,
 	Result = mnesia:transaction(F),
 	case Result of
-{aborted, Reason} ->
-	error_logger:error_report("ERROR: Immpossible to"
+		{aborted, Reason} ->
+			error_logger:error_report("ERROR: Immpossible to"
 			 " get servers due to ~p~n",[Reason]);
 		{atomic, Table} ->
+			%% Workaround for diameter instead of mnesia listener
+			%% Send Server parameters to node to connect to the server
+			{relay_manager, NodeId} ! {add_server, Server},
 			Table
-
 	end.
 
 get_all_servers_realm(RealmId) ->

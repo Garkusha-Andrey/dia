@@ -20,7 +20,7 @@
 -record(instanceWeight, {nodeId=undefined,
                          weight=undefined}).
 
--record(servers, {portIpAddr = {undefined,undefined},
+-record(servers, {portIpAddr = {undefined,undefined}, %% Port, IpAddr
 		  realmId = undefined,
 		  realmHost = undefined,
 		  nodeId = undefined,
