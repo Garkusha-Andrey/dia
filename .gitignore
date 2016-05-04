@@ -1,11 +1,13 @@
 *~
 *.beam
+*.swp
 .rebar/
 .eunit/
 erl_crash.dump
 controller/amnesia/
 controller/bmnesia/
 controller/cmnesia/
+Result/
 .project
 org.*
 .buildpath
