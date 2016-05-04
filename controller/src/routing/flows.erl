@@ -37,16 +37,16 @@ make(Type, DestinationIp, {SourceIp, SourceMask}, Port, Gateway) ->
               [FlowId, Prio, Name, SourceIp, SourceMask, Port, Gateway]),
 
     case Gateway of
-	drop ->
-	    Instructions = "
+        drop ->
+            Instructions = "
     <instructions>
         <instruction>
             <order>0</order>
         </instruction>
     </instructions>";
 
-	_ ->
-	    Instructions = "
+        _ ->
+            Instructions = "
     <instructions>
         <instruction>
             <order>0</order>
@@ -71,10 +71,10 @@ make(Type, DestinationIp, {SourceIp, SourceMask}, Port, Gateway) ->
     end,
 
     case Port of
-	noport ->
-	    PortMatch = "";
-	_ ->
-	    PortMatch = "
+        noport ->
+            PortMatch = "";
+        _ ->
+            PortMatch = "
     <tcp-source-port>" ++ integer_to_list(Port) ++ "</tcp-source-port>"
     end,
 
@@ -103,7 +103,7 @@ make(Type, DestinationIp, {SourceIp, SourceMask}, Port, Gateway) ->
 
 
 defaults(arp, [IpInternal,MaskInternal,
-	       IpExternal,MaskExternal]) ->
+               IpExternal,MaskExternal]) ->
 [{1,
 "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>
 <flow xmlns=\"urn:opendaylight:flow:inventory\">
@@ -207,7 +207,7 @@ defaults(arp, [IpInternal,MaskInternal,
 "}];
 
 defaults(ip,
-	 [IpInternal,IpExternal,MacSwitch,MacGateway])
+         [IpInternal,IpExternal,MacSwitch,MacGateway])
 ->
 [
 {4,

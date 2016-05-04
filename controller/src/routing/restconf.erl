@@ -1,7 +1,7 @@
 -module(restconf).
 
 -export([flow_send/1,
-	 table_delete/1]).
+         table_delete/1]).
 
 -define(CONTROLLER_ADDR, "127.0.0.1:8080").
 
@@ -56,4 +56,4 @@ flow_send({TableId, FlowId, Flow}) ->
 
 table_delete(TableId) ->
     request(delete, {make_table_url(TableId), [auth_header("admin", "admin")],
-		     [], []}).
+                     [], []}).
