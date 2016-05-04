@@ -196,14 +196,14 @@ get_diaLocalIp(NodeId) ->
 %%Gets Mac of diameter instance per NodeId:
 get_diaLocalMac(NodeId) ->
     Records = get_diaLocalIpConfig(),
-    lists:filtermap(fun(RElem) ->
+    lists:flatten(lists:filtermap(fun(RElem) ->
                             if RElem#diaLocalConfig.nodeId == NodeId ->
                                     {true, RElem#diaLocalConfig.macAddress};
                                true ->
                                     false
                             end
                     end,
-                    Records).
+                    Records)).
 
 get_GlobalData() ->
     F = fun() ->
