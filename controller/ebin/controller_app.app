@@ -3,7 +3,7 @@
               {vsn,"0.0.1"},
               {modules,[boot,controller_app,controller_lib,controller_server,
                         controller_sub,controller_sup,dia_stubs,flows,
-                        restconf,routing]},
+                        restconf,rlog,routing]},
               {registered,[controller_app,controller_sup,controller_server]},
               {applications,[kernel,stdlib,inets]},
               {mod,{controller_app,[]}},

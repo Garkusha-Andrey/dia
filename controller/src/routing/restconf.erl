@@ -30,11 +30,11 @@ request(Method, Body) ->
             {{_Protocol,Code,CodeText},
              _,
              Answer} = Details,
-            io:format("httpc:request(): ret(~w) code(~w), answer(~s), body(~s)~n",
-                          [Res, Code, CodeText, Answer]);
+            rlog:debug("httpc:request(): ret(~w) code(~w), answer(~s), body(~s)~n",
+			 [Res, Code, CodeText, Answer]);
         error ->
             {Error, _} = Details,
-            io:format("httpc:request(): error: ~w~n", [Error])
+            rlog:log("httpc:request(): error: ~w~n", [Error])
     end,
     Res.
 
@@ -51,7 +51,7 @@ flow_send(noflow) ->
 flow_send({FlowId, Flow}) ->
     flow_send({0, FlowId, Flow});
 flow_send({TableId, FlowId, Flow}) ->
-    %%io:format("Sending:~n~s~n",[Flow]),
+    rlog:debug("Sending:~n~s~n",[Flow]),
     put_method(make_flow_url(TableId, FlowId), "application/xml", Flow).
 
 table_delete(TableId) ->

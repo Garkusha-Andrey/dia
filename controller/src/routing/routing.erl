@@ -66,9 +66,9 @@ test_update(_Iteration)->
     Instances4 = lists:filter(fun(Instance) ->
                                       Instance#instanceChunks.weight /= 0
                               end, Instances3),
-    io:format("chunks taken; ~w~nFree: ~w~n", [Instances4, FreeChunks2]),
+    rlog:debug("chunks taken; ~w~nFree: ~w~n", [Instances4, FreeChunks2]),
     {Instances5, FreeChunks3} = give_chunks(Instances4, FreeChunks2),
-    io:format("chunks given; ~w~nFree: ~w~n", [Instances5, FreeChunks3]),
+    rlog:debug("chunks given; ~w~nFree: ~w~n", [Instances5, FreeChunks3]),
 
     %% there may be free chunks only if there are no instances
     %%true == length(Instances5) > 0 xor length(FreeChunks3) > 0,
@@ -141,7 +141,8 @@ exception_for_connection(Connection, Instances) ->
     {ok, {_,_,_,Lsb}} = inet:parse_ipv4_address(IpAddress),
     Chunk = Lsb band (?NUM_CHUNKS-1),
 
-    %%io:format("Connection ~p Chunk ~p Instances ~p~n", [Connection, Chunk, Instances]),
+    rlog:debug("Connection ~p Chunk ~p Instances ~p~n",
+	       [Connection, Chunk, Instances]),
     FilteredInstances = lists:filter(fun(Instance) ->
                                              Instance#instanceChunks.id == Connection#clients.nodeId
                                      end, Instances),
@@ -391,9 +392,9 @@ int_give_chunks([Instance = #instanceChunks{}|OldInstanceList],
                                    FreeChunks),
 
     FMoveChunk = fun(Chunk) ->
-        io:format("give_chunks(): chunk(~w) - instance [~w]-->[~w]~n",
-                  [element(1,Chunk), element(2, Chunk),
-                   Instance#instanceChunks.id])
+        rlog:debug("give_chunks(): chunk(~w) - instance [~w]-->[~w]~n",
+		   [element(1,Chunk), element(2, Chunk),
+		    Instance#instanceChunks.id])
                  end,
 
     lists:foreach(FMoveChunk, NewChunks),

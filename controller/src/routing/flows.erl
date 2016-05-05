@@ -33,8 +33,8 @@ make(Type, DestinationIp, {SourceIp, SourceMask}, Port, Gateway) ->
 
     FlowId = get_flow_id(Type, SourceIp, Port),
 
-    io:format("making flow id(~w) prio(~w) name(~s) ip(~s/~s) port(~p) sendto(~s)~n",
-              [FlowId, Prio, Name, SourceIp, SourceMask, Port, Gateway]),
+    rlog:log("making flow id(~w) prio(~w) name(~s) ip(~s/~s) port(~p) sendto(~s)~n",
+	     [FlowId, Prio, Name, SourceIp, SourceMask, Port, Gateway]),
 
     case Gateway of
         drop ->
