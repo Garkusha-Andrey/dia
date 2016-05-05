@@ -36,15 +36,16 @@
                         {application, [{alias, common},
                                        {dictionary, diameter_gen_base_rfc6733},
                                        {module, ?CALLBACK_MOD}]}]).
-%% deploy/1
+
 %% deploy([<Name>, <Ralm>, <local IP>, <remote IP>, <Port>])
-%% deploy([c1, 'ex.ru', {127,0,0,1}, {127,0,0,1}, 3911]).
+%% client:deploy(['c1','ex.ru','127.0.0.1','127.0.0.1','3911']). - from Erlang mashine
+%% erl -s client deploy 'c1' 'ex.com' "127.0.0.1" "127.0.0.1" 3911 - from bash
 deploy(T) ->
 	Name = lists:nth(1, T),
-	Realm = lists:nth(2, T),
-	LIp = lists:nth(3, T),
-	RIp = lists:nth(4, T),
-	Port = lists:nth(5, T),
+	Realm = lists:nth(2, T),	
+	{ok, LIp} = inet_parse:address(atom_to_list(lists:nth(3, T))),
+	{ok, RIp} = inet_parse:address(atom_to_list(lists:nth(4, T))),
+	Port  = list_to_integer(atom_to_list(lists:nth(5, T))),
 
     diameter:start(),
 	start(Name, Realm),
