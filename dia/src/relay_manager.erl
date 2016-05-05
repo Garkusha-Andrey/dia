@@ -16,13 +16,12 @@
 -export([relay_manager_listener/2]).
 
 -define(RELAY_MANAGER_SERVER_TABLE, server_table).
--define(REALM_ID, 'nfv.com').
+-define(REALM_ID, 'nfv.ru').
 
 start(T) ->
-	IP_atom = lists:nth(1, T),
-	SwitchIP = case inet_parse:address(atom_to_list(IP_atom)) of
+	SwitchIP = case inet_parse:address(atom_to_list(lists:nth(1, T))) of
 		{ok, IP}  		-> IP;
-		{error, Reason} -> io:format("Bad Addr: ~w ~n", [Reason])
+		{error, Reason} -> io:format("Bad Addr: ~w. Reason ~w ~n", [lists:nth(1, T), Reason])
 	end,
 	
 	%% It is not working when starts from bash

@@ -14,8 +14,9 @@ diameter-relay-agent/controller/ebin]> ../../boot/boot.sh -a=controller_app -net
 ```
 
 Start diameters instanses. Change **-netIf, -inst, -diaMac** in accordance with node
+   **-diaMac** - MAC related to payload_network
 ```
-diameter-relay-agent/controller/ebin]> ../../boot/boot.sh -a=diameter -netIf=eth2 -rnode=controllerA@10.10.0.55 -inst=001 -diaMac=fa:16:3e:84:f2:07 -publicIp=10.10.2.2
+diameter-relay-agent/controller/ebin]> ../../boot/boot.sh -a=diameter -netIf=eth2 -rnode=controllerA@10.10.0.55 -inst=001 -diaMac=fa:16:3e:3d:ff:b0 -publicIp=10.10.2.2
 ```
 
 After that you can  trigger initial distribution

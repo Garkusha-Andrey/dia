@@ -139,7 +139,9 @@ else
 		echo "Application controller_app!"
 		if [ "$CPRIO" != "" ]
 		then
-			if [ "$OVSIntIp" != "" ] && [ "$OVSIntMask" != "" ] && [ "$PublicIp" != "" ] && [ "$PublicMask" != "" ] && [ "$ExtGwMac" != "" ] && [ "$OVSMac" != "" ]
+			if [ "$OVSIntIp" != "" ] && [ "$OVSIntMask" != "" ] && \
+				[ "$PublicIp" != "" ] && [ "$PublicMask" != "" ] && \
+				[ "$ExtGwMac" != "" ] && [ "$OVSMac" != "" ]
 			then
 				if [ "$RNODE" != "" ]
 				then
@@ -172,11 +174,15 @@ else
 		if [ "$APPLICATION" = "diameter" ]; then
 			echo "Diameter!"
 			if [ "$RNODE" != "" ] && [ $DIAINSTID != "" ] && \
-			   [ "$PublicIp" != "" ] && [ $DIAMETER_MAC != "" ]
+				[ "$PublicIp" != "" ] && [ $DIAMETER_MAC != "" ]
 			then
 				echo "boot diam with rnode"
 				DEnode=diameter`echo $DIAINSTID`@`echo $LOCALIP`
+				InboundRalayName=ir`echo $DIAINSTID`
+				REALM='nfv.ru'
+				INBOUND_RELAY_PORT=3911
 				erl -name $DEnode \
+				 -s irelay deploy $InboundRalayName $REALM $PublicIp $INBOUND_RELAY_PORT \
 				 -s relay_manager start $PublicIp \
 				 -s boot start $RNODE \
 				 -s controller_app change_configuration \

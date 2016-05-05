@@ -35,12 +35,13 @@ init(NodeName) ->
 	ets:insert(next_hope, {active, NodeName, ?LISTENER_PROCESS}).
 
 %% deploy/1 ([<Name>, <Ralm>, <IP>, <Port>])
-%% deploy([or1, 'ex.ru', {127,0,0,1}, 3911]).
+%% irelay:deploy(['ir1','ex.ru','127.0.0.1','3911']). - from Erlang mashine
+%% erl -s irelay deploy 'ir1' 'ex.com' "127.0.0.1" 3911 - from bash
 deploy(T) ->
-    Name = lists:nth(1, T),
+    Name  = lists:nth(1, T),
 	Realm = lists:nth(2, T),
-	LIp = lists:nth(3, T),
-	Port = lists:nth(4, T),
+	{ok, LIp} = inet_parse:address(atom_to_list(lists:nth(3, T))),
+	Port  = list_to_integer(atom_to_list(lists:nth(4, T))),
 
     diameter:start(),
 	
