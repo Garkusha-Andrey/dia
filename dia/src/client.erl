@@ -92,7 +92,7 @@ call(Name, user) ->
 	RAR_packet = #diameter_packet{%%header = Header,
 								  msg = RAR},
 	
-	io:format("client.erl::call(Name)~n SId: ~s\n", [SId]),
+	io:format("client.erl::call(~w,user)~n SId: ~w ~n", [Name, RAR]),
     diameter:call(Name, common, RAR_packet, []).
 
 

@@ -39,8 +39,8 @@
 
 -define(UNEXPECTED, erlang:error({unexpected, ?MODULE, ?LINE})).
 
-peer_up(_SvcName, _Peer, State) ->
-	io:format("server_cb::peer_up~n"),
+peer_up(_SvcName, {PeerRef, Cap}, State) ->
+	io:format("server_cb::peer_up ~p ~n", [PeerRef]),
     State.
 
 peer_down(_SvcName, _Peer, State) ->

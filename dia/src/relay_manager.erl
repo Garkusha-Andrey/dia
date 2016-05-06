@@ -49,8 +49,6 @@ relay_manager_listener(IPsrc, Index) ->
 	receive
 		{add_server, Server}
 			when is_record(Server, servers) ->
-			io:fwrite("relay_manager received a msg to add server. ~n"
-					  "Server: ~w ~n", [Server]),
 
 			RealmID = ?REALM_ID,
 			ServiceName = list_to_atom(lists:concat(["server_",Index])),

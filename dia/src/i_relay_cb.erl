@@ -54,7 +54,7 @@ handle_error(_Reason, _Request, _SvcName, _Peer) ->
     ?UNEXPECTED.
 
 %% A request whose decode was successful ...
-handle_request(#diameter_packet{header = Header, msg = Req, errors = []} = RcvRequestPkt, _SvcName, {_, Caps})
+handle_request(#diameter_packet{header = Header, msg = Req, errors = []} = RcvRequestPkt, SvcName, {_, Caps})
   when is_record(Req, diameter_base_RAR) ->
 	io:format("i_relay_cb::handle_request RAR diameter message\n"),
     #diameter_caps{origin_host = {OH,_},
@@ -82,7 +82,7 @@ handle_request(#diameter_packet{header = Header, msg = Req, errors = []} = RcvRe
 
 	
 	%% Will try to resend it to relay_outbound
-	ORelayAnswerPkt = pass_to_orelay(RcvRequestPkt, Caps),
+	ORelayAnswerPkt = pass_to_orelay(SvcName, RcvRequestPkt, Caps),
 
 	%%compile Answer Packet
 	AnswerPkt = compile_answer_packet(ORelayAnswerPkt, TemplateAnswerPkt),
@@ -123,31 +123,34 @@ rc(_) ->
 %% Internal functions
 %% ====================================================================
 
-pass_to_orelay(Pkt = #diameter_packet{}, Caps = #diameter_caps{}) ->
-	io:fwrite("i_relay_cb::pass_to_orelay ~n"),
-	ListenerProcess = 'create_procee_name',
+pass_to_orelay(SvcName, Pkt = #diameter_packet{}, Caps = #diameter_caps{}) ->
+	ListenerProcess = list_to_atom(lists:concat(["listener_ir_", SvcName])),
 	register(ListenerProcess, self()),
 	
-	ORelay = lookup_orelay(Pkt, Caps, stub),
+	ORelay = lookup_orelay(Pkt, Caps),
 	send_reques_to_orelay(ListenerProcess, ORelay, Pkt),
 	
 	AnswerPkt = wait_for_orelay_answer(),
 	AnswerPkt;
-pass_to_orelay(_Pkt, _Caps) ->
+pass_to_orelay(_SvcName, _Pkt, _Caps) ->
 	io:fwrite("ERROR: Something goes wrong! pass_to_orelay() didn't parse message ~n").
 
 
 %% lookup_relay_outbound/1
-lookup_orelay(#diameter_packet{msg = _Req}, Caps) ->
+lookup_orelay(#diameter_packet{msg = Req}, Caps) ->
 	#diameter_caps{ origin_host = {OH,_},
                    	origin_realm = {OR,_}}
         = Caps,
+
+	io:fwrite("i_relay_cb::lookup_orelay for Host: ~p, Realm: ~p ~n", [OH, OR]),
+	Connection = controller_lib:get_connection_by_realm(OH,OR),
+	io:fwrite("i_relay_cb::lookup_orelay Connection ~w ~n", [Connection]),
+	{NodeId, ProcessId} = lists:nth(1, controller_lib:get_connection_by_realm(OH,OR)),
+
 	
-	Controller = get_controller_node_name(),
-	Server = rpc:call(Controller, controller_lib, get_server_by_host_realm, [OH, OR]),
-		
-	#relay{ node_name = Server#servers.nodeId,
-			process_name = Server#servers.processId};
+	io:fwrite("                          to  Node: ~w, ProcessId: ~w ~n",[NodeId, ProcessId]),
+	#relay{ node_name = NodeId,
+			process_name = ProcessId};
 
 lookup_orelay(_Pkt, _Caps) ->
 	io:fwrite("ERROR: Something goes wrong! lookup_relay_outbound() didn't parse message ~n").
@@ -189,7 +192,3 @@ wait_for_orelay_answer() ->
 
 compile_answer_packet(_ORelayAnswerPkt, TemplateAnswerPkt) ->
 	TemplateAnswerPkt.
-
-
-get_controller_node_name() ->
-	ok.

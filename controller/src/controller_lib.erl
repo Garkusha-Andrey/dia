@@ -36,12 +36,18 @@
          delete_session_data/1,
          get_servers_config/0,
          list_servers/0,
-         get_servers_per_node/1,
-         store_procId/2,
-         store_server_procId/3,
-         store_client_port_ipadd/3,
-         delete_client_port_ipaddr/2
+         get_servers_per_node/1
         ]).
+
+%% API for diameter
+-export([%% servers Table
+		 store_procId/2,
+		 store_server_procId/3,
+		 get_connection_by_realm/2,
+		 
+		 %% clients Table
+		 store_client_port_ipadd/3,
+         delete_client_port_ipaddr/2]).
 
 -include("controller_app.hrl").
 
@@ -341,7 +347,7 @@ get_instance_by_node(Node) ->
     case Result of
         {aborted, Reason} ->
             error_logger:error_report("Impossible to get the dia instances from "
-                                                                          "diaConfig table due to reason: ~p",[Reason]);
+                                      "diaConfig table due to reason: ~p",[Reason]);
         {atomic, ResultOfFun} ->
             ResultOfFun
     end.
@@ -511,6 +517,32 @@ store_server_procId(Port, IpAddress, ProcessId) ->
     [Server] = get_server(Port, IpAddress),
     store_procId(Server, ProcessId).
 
+get_connection_by_realm(RealmHost, RealmId) ->
+	error_logger:error_report("get_connection_by_realm RealmHost ~w and RealmId ~w ~n",
+									  [RealmHost, RealmId]),
+	    F = fun() ->
+                ServersKeys = mnesia:all_keys(servers),
+                lists:foldl(fun(Elem, Acc) ->
+                                    [Record] = mnesia:read(servers, Elem),
+                                    case {Record#servers.realmHost} of
+                                        {RealmHost} ->
+                                            [{Record#servers.processId,Record#servers.nodeId}|Acc];
+                                        _ ->
+                                            Acc
+                                    end
+                            end,
+                            [],
+                            ServersKeys)                
+        end,
+    Result = mnesia:transaction(F),
+    case Result of
+        {aborted, Reason} ->
+            error_logger:error_report("Impossible to get the servers connections to "
+                                      "servers with RealmHost ~w and RealmId ~w due to ~p~n",
+									  [RealmHost, RealmId, Reason]);
+        {atomic, ResultOfFun} ->
+            ResultOfFun
+    end.
 
 store_client_port_ipadd(Port, IpAddress, NodeId) ->
     F = fun() ->

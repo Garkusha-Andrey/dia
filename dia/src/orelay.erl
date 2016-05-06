@@ -80,10 +80,10 @@ start(Name, Realm, Opts) ->
                                    false == lists:keymember(K, 1, Opts)]).
 
 %% connect/2
-connect(Name, T) ->
+connect(Name, {tcp, _LIp, RIp, Port} = T) ->
     Connection = node:connect(Name, T),
 	case Connection of
-		{ok, _}		-> orelay_listener(Name);
+		{ok, _}		-> orelay_listener(Name, RIp, Port);
 		{error, _} 	-> io:fwrite("ORelay not connected to server")
 	end
 .
@@ -133,14 +133,16 @@ stop(Name) ->
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
-orelay_listener(Name) ->
-	io:fwrite("Start of orelay_listener ~n"),
-	ListenerProcessName = list_to_atom(lists:concat(["listener_",Name])),
+orelay_listener(Name, RIp, Port) ->
+	ListenerProcessName = list_to_atom(lists:concat(["listener_or_",Name])),
 	register(ListenerProcessName, spawn(?MODULE, listen_for_request, [Name])),
+	
+	io:fwrite("orelay:: Name ~w, Process ~w ~n", [Name, ListenerProcessName]),
+	controller_lib:store_server_procId(Port, inet_parse:ntoa(RIp), ListenerProcessName),
 	ok.
 
 listen_for_request(Name) ->
-	io:fwrite("Start of listen_for_request ~n"),
+	io:fwrite("orelay:: waiting for request ~w ~n", [Name]),
 	receive
 		{PayloadRequest, Pkt}
 		    when is_record(Pkt, diameter_packet)->

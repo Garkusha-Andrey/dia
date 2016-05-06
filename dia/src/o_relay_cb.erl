@@ -22,13 +22,13 @@
 %% peer_up/3
 
 peer_up(_SvcName, _Peer, State) ->
-	io:format("o_relay_cb::peer_up~n"),
+	io:format("o_relay_cb::peer_up ~n"),
     State.
 
 %% peer_down/3
 
 peer_down(_SvcName, _Peer, State) ->
-	io:format("o_relay_cb::peer_down~n"),
+	io:format("o_relay_cb::peer_down ~n"),
     State.
 
 %% pick_peer/4

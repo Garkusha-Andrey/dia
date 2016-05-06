@@ -5,8 +5,8 @@
 ### Deploy diameter client
 
 Format of the deploy command is:   
-```deploy([<Name>, <Ralm>, <Local IP>, <Remote IP>, <Port>])```
-    Name - name o fthe service   
+```deploy([<Name>, <Ralm>, <Local IP>, <Remote IP>, <Port>])```   
+    Name - name of the service   
     Realm - diameter Realm   
     Local IP - source IP of the diameter client   
     Remote IP - diameter server IP   

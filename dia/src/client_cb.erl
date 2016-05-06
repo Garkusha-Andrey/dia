@@ -35,14 +35,14 @@
 
 %% peer_up/3
 
-peer_up(_SvcName, _Peer, State) ->
-	io:format("client.cb::peer_up~n"),
+peer_up(_SvcName, Peer, State) ->
+	io:format("client.cb::peer_up ~p ~n", [Peer]),
     State.
 
 %% peer_down/3
 
-peer_down(_SvcName, _Peer, State) ->
-	io:format("client.cb::peer_down~n"),
+peer_down(_SvcName, Peer, State) ->
+	io:format("client.cb::peer_down ~p ~n", [Peer]),
     State.
 
 %% pick_peer/4
