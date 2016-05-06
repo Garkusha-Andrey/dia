@@ -294,11 +294,11 @@ delete_from_servers(Node) ->
         Result = mnesia:transaction(F),
     case Result of
         {aborted, Reason} ->
-            error_logger:error_report("ERROR: Immpossible to get diaConnections due to ~p",[Reason]);
+            error_logger:error_report("ERROR: Immpossible to delete server due to ~p",[Reason]);
         {atomic, ResultOfFun} ->
             ResultOfFun
     end.
-        
+
 delete_diaconnections(Node) ->
     F = fun() -> 
                 AllInstances = mnesia:all_keys(diaConnections),
@@ -317,21 +317,10 @@ delete_diaconnections(Node) ->
     end.
 
 delete_diaLocalConfig(Node) ->
-    F = fun() ->
-                Nodes = mnesia:all_keys(diaLocalConfig),
-                lists:map(fun(#diaLocalConfig{nodeId = NodeId} = Elem) when NodeId == Node ->                                                   
-                                  [Record] = mnesia:read(diaLocalConfig, Elem),
-                                  mnesia:delete_object(Record)
-                          end,
-                          Nodes)
-        end,
-    Result = mnesia:transaction(F),
-    case Result of
-        {aborted, Reason} ->
-            error_logger:error_report("ERROR: Immpossible to get diaLocalConfig due to ~p",[Reason]);
-        {atomic, ResultOfFun} ->
-            lists:append(ResultOfFun)
-    end.
+    check_transaction(mnesia:transaction(fun() ->
+			mnesia:delete({diaLocalConfig, Node})
+					 end),
+		      "Impossible to delete from diaLocalConfig").
 
 get_instance_by_node(Node) ->
     F = fun() ->
