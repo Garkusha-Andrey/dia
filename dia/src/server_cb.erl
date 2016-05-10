@@ -39,8 +39,8 @@
 
 -define(UNEXPECTED, erlang:error({unexpected, ?MODULE, ?LINE})).
 
-peer_up(_SvcName, {PeerRef, Cap}, State) ->
-	io:format("server_cb::peer_up ~p ~n", [PeerRef]),
+peer_up(_SvcName, Peer, State) ->
+	io:format("server_cb::peer_up Peer: ~p ~n", [Peer]),
     State.
 
 peer_down(_SvcName, _Peer, State) ->
@@ -63,7 +63,7 @@ handle_error(_Reason, _Request, _SvcName, _Peer) ->
     ?UNEXPECTED.
 
 %% A request whose decode was successful ...
-handle_request(#diameter_packet{header = Header, msg = Req, errors = []}, _SvcName, {_, Caps})
+handle_request(#diameter_packet{header = Header, msg = Req, errors = []} = Pkt, _SvcName, {_, Caps})
   when is_record(Req, diameter_base_RAR) ->
 	io:format("server_cb::handle_request RAR diameter message\n"),
     #diameter_caps{origin_host = {OH,_},
@@ -77,7 +77,7 @@ handle_request(#diameter_packet{header = Header, msg = Req, errors = []}, _SvcNa
 		= Header,
 	
 	io:fwrite("server_cb:: HopByHopId: ~p, EndToEndId: ~p \n", [HopByHopId, EndToEndId]),
-	io:fwrite("server_cb::handle_request ~p \n", [Req]),
+	io:fwrite("server_cb::handle_request ~p ~n Pkt: ~p ~n", [Req, Pkt]),
 	
 	HeaderAnswer = #diameter_header{%%hop_by_hop_id = HopByHopId,
 									end_to_end_id = EndToEndId},

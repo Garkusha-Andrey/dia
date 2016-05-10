@@ -127,7 +127,7 @@ stop(Name) ->
 %% Return transport options for a listening transport.
 
 server_opts({T, Addr, Port}) ->
-	io:format("node.erl:: client_opts: mod: ~w addr: ~w port: ~w ~n", [T, Addr, Port]),
+	io:format("node.erl:: server_opts: mod: ~w addr: ~w port: ~w ~n", [T, Addr, Port]),
     [{transport_module, tmod(T)},
      {transport_config, [{reuseaddr, true},
                          {ip, addr(Addr)},
@@ -162,8 +162,8 @@ client_opts(T) ->
 
 %% ---------------------------------------------------------------------------
 
-tmod(tcp)  -> diameter_tcp;
-tmod(my_tcp)  -> diameter_tcp;
+tmod(tcp)  -> nfv_diameter_tcp;
+	          %%diameter_tcp;
 tmod(sctp) -> diameter_sctp.
 
 ip(default) ->

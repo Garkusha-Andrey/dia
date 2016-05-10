@@ -66,11 +66,13 @@ prepare_request(#diameter_packet{msg = ['RAR' = T | Avps]}, _, {_, Caps}) ->
                {'Destination-Realm', DR}
              | Avps]};
 
-prepare_request(#diameter_packet{msg = Rec}, _, {_, Caps}) ->
-	io:format("client.cb::prepare_request 2~n"),
+prepare_request(#diameter_packet{msg = Rec} = Pkt, _, {_, Caps}) ->
+	io:format("client.cb::prepare_request 2~n Pkt: ~p~n", [Pkt]),
     #diameter_caps{origin_host = {OH, DH},
                    origin_realm = {OR, DR}}
         = Caps,
+	io:fwrite("           Origin Host (dest) : ~p, ~p ~n"
+			  "           Origin Realm(dest): ~p, ~p ~n", [OH, DH, OR, DR]),
 
     {send, Rec#diameter_base_RAR{'Origin-Host' = OH,
                                  'Origin-Realm' = OR,
