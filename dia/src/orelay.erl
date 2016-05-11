@@ -65,7 +65,7 @@ deploy(T) ->
     diameter:start(),
 	
 	start(Name, Realm),
-    connect(Name, {tcp, LIp, RIp, Port})
+    connect(Name, {nfv_tcp, LIp, RIp, Port})
 	.
 
 %% start/2
