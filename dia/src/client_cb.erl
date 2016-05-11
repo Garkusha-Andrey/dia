@@ -71,13 +71,21 @@ prepare_request(#diameter_packet{msg = Rec} = Pkt, _, {_, Caps}) ->
     #diameter_caps{origin_host = {OH, DH},
                    origin_realm = {OR, DR}}
         = Caps,
-	io:fwrite("           Origin Host (dest) : ~p, ~p ~n"
-			  "           Origin Realm(dest): ~p, ~p ~n", [OH, DH, OR, DR]),
+	
+	Msg = Rec#diameter_base_RAR{'Origin-Host' = OH,
+                                 'Origin-Realm' = OR},
+	
+	case {Msg#diameter_base_RAR.'Destination-Host', Msg#diameter_base_RAR.'Destination-Realm'} of
+		{"", ""} ->
+			io:fwrite("Destination is empty~n");
+		{OHost, ORealm} ->
+			io:fwrite("Destination is not empty.~n Host ~p Realm: ~p~n", [OHost, ORealm])
+	end,
 
-    {send, Rec#diameter_base_RAR{'Origin-Host' = OH,
-                                 'Origin-Realm' = OR,
-                                 'Destination-Host' = DH,
-                                 'Destination-Realm' = DR}}.
+	io:fwrite("           Host (origin/destenation) : ~p, ~p ~n"
+			  "           Realm (origin/destenation): ~p, ~p ~n", [OH, DH, OR, DR]),
+
+    {send, Msg}.
 
 %% prepare_retransmit/3
 

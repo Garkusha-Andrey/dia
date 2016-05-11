@@ -17,6 +17,7 @@
          start/3,     %%
          connect/2,   %% add a connecting transport
          call/2,      %% send using the record encoding
+         call/4,      
          cast/1,      %% send using the list encoding and detached
          stop/1]).    %% stop a service
 		 
@@ -78,21 +79,28 @@ call(Name, rar) ->
     RAR = #diameter_base_RAR{'Session-Id' = SId,
                              'Auth-Application-Id' = 0,
                              'Re-Auth-Request-Type' = 0},
-	io:format("client.erl::call(Name)~n SId: ~s\n", [SId]),
-    diameter:call(Name, common, RAR, []);
+	
+	io:format("client.erl::call(~w)~n"
+              "Msg: ~p ~n", [Name, RAR]),
+    diameter:call(Name, common, RAR, []).
 
-%% Send defined message to server (like RAR)
-call(Name, user) ->
+%% call/4
+%% Send RAR message to  specific server
+%% call(ca, user, "ex1.com", "s1.ex1.com") 
+call(Name, user, Realm, Host) ->
     SId = diameter:session_id(?L(Name)),
-	%%Header = #diameter_header{hop_by_hop_id = 123},
     RAR = #diameter_base_RAR{'Session-Id' = SId,
                              'Auth-Application-Id' = 0,
-                             'Re-Auth-Request-Type' = 0},
+                             'Re-Auth-Request-Type' = 0,
+
+                             %% define final destenation [rfc 6733 ch. 6.1]
+                             'Destination-Realm' = Realm,
+		                     'Destination-Host'  = Host},
 	
-	RAR_packet = #diameter_packet{%%header = Header,
-								  msg = RAR},
+	RAR_packet = #diameter_packet{msg = RAR},
 	
-	io:format("client.erl::call(~w,user)~n SId: ~w ~n", [Name, RAR]),
+	io:format("client.erl::call(~w)[user]~n"
+              "Msg: ~p ~n", [Name, RAR]),
     diameter:call(Name, common, RAR_packet, []).
 
 

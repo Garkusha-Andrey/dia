@@ -137,22 +137,23 @@ pass_to_orelay(_SvcName, _Pkt, _Caps) ->
 
 
 %% lookup_relay_outbound/1
-lookup_orelay(#diameter_packet{msg = Req}, Caps) ->
-	#diameter_caps{ origin_host = {OH,_},
-                   	origin_realm = {OR,_}}
-        = Caps,
+lookup_orelay(#diameter_packet{msg = Req}, Caps)
+    when is_record(Req, diameter_base_RAR) ->
+	
+	DestenationHost  = Req#diameter_base_RAR.'Destination-Host',
+	DestenationRealm = Req#diameter_base_RAR.'Destination-Realm',
 
-	io:fwrite("i_relay_cb::lookup_orelay for Host: ~p, Realm: ~p ~n", [OH, OR]),
-	Connection = controller_lib:get_connection_by_realm(OH,OR),
+	io:fwrite("i_relay_cb::lookup_orelay for Host: ~p, Realm: ~p ~n",[DestenationHost, DestenationRealm]),
+	Connection = controller_lib:get_connection_by_realm(DestenationHost,DestenationRealm),
 	io:fwrite("i_relay_cb::lookup_orelay Connection ~w ~n", [Connection]),
-	{NodeId, ProcessId} = lists:nth(1, controller_lib:get_connection_by_realm(OH,OR)),
+	{NodeId, ProcessId} = lists:nth(1, controller_lib:get_connection_by_realm(DestenationHost,DestenationRealm)),
 
 	
 	io:fwrite("                          to  Node: ~w, ProcessId: ~w ~n",[NodeId, ProcessId]),
 	#relay{ node_name = NodeId,
 			process_name = ProcessId};
 
-lookup_orelay(_Pkt, _Caps) ->
+lookup_orelay(Pkt, _Caps) ->
 	io:fwrite("ERROR: Something goes wrong! lookup_relay_outbound() didn't parse message ~n").
 
 lookup_orelay(#diameter_packet{msg = _Req}, _Caps, stub) ->
@@ -164,6 +165,7 @@ lookup_orelay(#diameter_packet{msg = _Req}, _Caps, stub) ->
 
 
 %% send_reques_to_orelay/3
+%% ListenerProcess = process in irelay, which will wait for answer
 send_reques_to_orelay(ListenerProcess,
 					  #relay{ process_name = ProcessName, node_name = NodeName},
 					  #diameter_packet{} = Pkt) ->

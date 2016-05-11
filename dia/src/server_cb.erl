@@ -77,7 +77,7 @@ handle_request(#diameter_packet{header = Header, msg = Req, errors = []} = Pkt, 
 		= Header,
 	
 	io:fwrite("server_cb:: HopByHopId: ~p, EndToEndId: ~p \n", [HopByHopId, EndToEndId]),
-	io:fwrite("server_cb::handle_request ~p ~n Pkt: ~p ~n", [Req, Pkt]),
+	io:fwrite("server_cb::handle_request ~p ~n", [Req]),
 	
 	HeaderAnswer = #diameter_header{%%hop_by_hop_id = HopByHopId,
 									end_to_end_id = EndToEndId},

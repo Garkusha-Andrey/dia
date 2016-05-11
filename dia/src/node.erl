@@ -163,7 +163,6 @@ client_opts(T) ->
 %% ---------------------------------------------------------------------------
 
 tmod(tcp)  -> nfv_diameter_tcp;
-	          %%diameter_tcp;
 tmod(sctp) -> diameter_sctp.
 
 ip(default) ->

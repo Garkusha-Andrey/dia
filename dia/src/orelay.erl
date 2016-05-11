@@ -183,8 +183,3 @@ send_answer_to_irelay(IRelay = #relay{},
 	io:fwrite("I`m going to send answer to node: ~w ~n"
 			  "process: ~w ~n", [IRelay#relay.node_name, IRelay#relay.process_name]),
 	{IRelay#relay.process_name, IRelay#relay.node_name} ! {payload_answer_from_orelay, Pkt}.
-
-
-lookup_for_irelay(_Pkt = #diameter_packet{}) ->
-	#relay{ process_name = way_back,
-			node_name	 = 'ir1@agarkush-VirtualBox'}.
