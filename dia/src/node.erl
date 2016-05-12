@@ -162,9 +162,9 @@ client_opts(T) ->
 
 %% ---------------------------------------------------------------------------
 
-tmod(tcp)  -> diameter_tcp;
+tmod(tcp)      -> diameter_tcp;
 tmod(nfv_tcp)  -> nfv_diameter_tcp;
-tmod(sctp) -> diameter_sctp.
+tmod(sctp)     -> diameter_sctp.
 
 ip(default) ->
     [];

@@ -518,17 +518,16 @@ store_server_procId(Port, IpAddress, ProcessId) ->
     store_procId(Server, ProcessId).
 
 get_connection_by_realm(RealmHost, RealmId) ->
-	error_logger:error_report("get_connection_by_realm RealmHost ~w and RealmId ~w ~n",
+	io:fwrite("get_connection_by_realm RealmHost ~w and RealmId ~w ~n",
 									  [RealmHost, RealmId]),
 	    F = fun() ->
                 ServersKeys = mnesia:all_keys(servers),
                 lists:foldl(fun(Elem, Acc) ->
                                     [Record] = mnesia:read(servers, Elem),
-                                    case {Record#servers.realmHost} of
-                                        {RealmHost} ->
+                                    if
+                                        {Record#servers.realmHost, Record#servers.realmId} == {RealmId, RealmHost} ->
                                             [{Record#servers.processId,Record#servers.nodeId}|Acc];
-                                        _ ->
-                                            Acc
+                                        true -> Acc
                                     end
                             end,
                             [],
@@ -538,7 +537,7 @@ get_connection_by_realm(RealmHost, RealmId) ->
     case Result of
         {aborted, Reason} ->
             error_logger:error_report("Impossible to get the servers connections to "
-                                      "servers with RealmHost ~w and RealmId ~w due to ~p~n",
+                                      "servers with RealmHost ~p and RealmId ~p due to ~p~n",
 									  [RealmHost, RealmId, Reason]);
         {atomic, ResultOfFun} ->
             ResultOfFun

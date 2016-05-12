@@ -73,12 +73,12 @@ handle_request(#diameter_packet{header = Header, msg = Req, errors = []} = RcvRe
 	AnswerHdr = #diameter_header{%%hop_by_hop_id = HopByHopId,
 				end_to_end_id = EndToEndId},
 	RAA = #diameter_base_RAA{'Result-Code' = rc(Type),
-                               'Origin-Host' = OH,
-                               'Origin-Realm' = OR,
-                               'Session-Id' = Id},
+                             'Origin-Host' = OH,
+                             'Origin-Realm' = OR,
+                             'Session-Id' = Id},
 	
-	TemplateAnswerPkt = #diameter_packet{header = AnswerHdr,
-							  msg = RAA},
+	TemplateAnswerPkt = #diameter_packet{ header = AnswerHdr,
+										  msg = RAA},
 
 	
 	%% Will try to resend it to relay_outbound
@@ -146,8 +146,10 @@ lookup_orelay(#diameter_packet{msg = Req}, Caps)
 	io:fwrite("i_relay_cb::lookup_orelay for Host: ~p, Realm: ~p ~n",[DestenationHost, DestenationRealm]),
 	Connection = controller_lib:get_connection_by_realm(DestenationHost,DestenationRealm),
 	io:fwrite("i_relay_cb::lookup_orelay Connection ~w ~n", [Connection]),
-	{NodeId, ProcessId} = lists:nth(1, controller_lib:get_connection_by_realm(DestenationHost,DestenationRealm)),
-
+	if
+		Connection == [] -> {NodeId, ProcessId} = {node(), empty};
+		true -> {NodeId, ProcessId} = lists:nth(1, Connection)
+	end,
 	
 	io:fwrite("                          to  Node: ~w, ProcessId: ~w ~n",[NodeId, ProcessId]),
 	#relay{ node_name = NodeId,
