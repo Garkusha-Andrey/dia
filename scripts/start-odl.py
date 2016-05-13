@@ -43,6 +43,6 @@ script = subprocess.check_output("find " + ODL_PATH + " -name " + RUN_SCRIPT,
                                  shell = True)
 
 print "Starting ODL: " + script[:-1]
-subprocess.call(script[:-1])
+subprocess.call("export JAVA_MAX_MEM=4G; export JAVA_MAX_PERM_MEM=512m; " + script[:-1], shell = True)
 
 print "Happy end"
