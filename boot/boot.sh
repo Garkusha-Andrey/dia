@@ -124,7 +124,7 @@ if [ $APPLICATION = "" ]; then
 		if [ "$CPRIO" != "" ]
 		then
 			Enode=controller`echo $CPRIO`@`echo $LOCALIP`
-			erl -name $Enode -s boot start -s controller_app change_configuration \
+			nohup erl -detached -name $Enode -s boot start -s controller_app change_configuration \
 			    $OVSIntIp $OVSIntMask $PublicIp $PublicMask $OVSMac $ExtGwMac \
 			    -setcookie 'ABCD' \
 			    -config ../config/controller`echo $CPRIO`.config
@@ -147,13 +147,13 @@ else
 				then
 					echo "Then != controller_app"
 					Enode=controller`echo $CPRIO`@`echo $LOCALIP`
-					erl -name $Enode -s boot start $RNODE -s controller_app change_configuration \
+					nohup erl -detached -name $Enode -s boot start $RNODE -s controller_app change_configuration \
 					    $OVSIntIp $OVSIntMask $PublicIp $PublicMask $OVSMac $ExtGwMac \
 					    -setcookie 'ABCD' \
 					    -config ../config/controller`echo $CPRIO`.config
 				else
 					Enode=controller`echo $CPRIO`@`echo $LOCALIP`
-					erl -name $Enode -s boot start -s $APPLICATION change_configuration \
+					nohup erl -detached -name $Enode -s boot start -s $APPLICATION change_configuration \
 					    $OVSIntIp $OVSIntMask $PublicIp $PublicMask $OVSMac $ExtGwMac \
 					    -setcookie 'ABCD' \
 					    -config ../config/controller`echo $CPRIO`.config
@@ -166,7 +166,7 @@ else
 		else
 			echo "You are trying to start the controller application. You need specify the priority of Controller App!\n"
 			Enode=controller`echo $CPRIO`@`echo $LOCALIP`
-					erl -name $Enode -s application start inets -s boot start -s $APPLICATION change_configuration \
+					nohup erl -detached -name $Enode -s application start inets -s boot start -s $APPLICATION change_configuration \
 					    $OVSIntIp $OVSIntMask $PublicIp $PublicMask $OVSMac $ExtGwMac \
 					    -setcookie 'ABCD'
 		fi
@@ -181,7 +181,7 @@ else
 				InboundRalayName=ir`echo $DIAINSTID`
 				REALM='nfv.ru'
 				INBOUND_RELAY_PORT=3911
-				erl -name $DEnode \
+				nohup erl -detached -name $DEnode \
 				 -s irelay deploy $InboundRalayName $REALM $PublicIp $INBOUND_RELAY_PORT \
 				 -s relay_manager start $PublicIp \
 				 -s boot start $RNODE \
