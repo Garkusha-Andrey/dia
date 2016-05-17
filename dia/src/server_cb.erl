@@ -40,10 +40,11 @@
 -define(UNEXPECTED, erlang:error({unexpected, ?MODULE, ?LINE})).
 
 peer_up(_SvcName, Peer, State) ->
-	io:format("server_cb::peer_up Peer: ~p ~n", [Peer]),
+	io:format("server_cb::peer_up~n"),
+	file:write_file("server.log", io_lib:fwrite("~p connected to client ~p: ~n", [node(), Peer])),
     State.
 
-peer_down(_SvcName, _Peer, State) ->
+peer_down(_SvcName, Peer, State) ->
 	io:format("server_cb::peer_down~n"),
     State.
 

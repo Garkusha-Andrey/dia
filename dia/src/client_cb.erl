@@ -37,12 +37,13 @@
 
 peer_up(_SvcName, Peer, State) ->
 	io:format("client.cb::peer_up ~p ~n", [Peer]),
+	file:write_file("client.log", io_lib:fwrite("~p connected to server ~p: ~n", [node(), Peer])),
     State.
 
 %% peer_down/3
 
-peer_down(_SvcName, Peer, State) ->
-	io:format("client.cb::peer_down ~p ~n", [Peer]),
+peer_down(_SvcName, _Peer, State) ->
+	io:format("client.cb::peer_down ~n"),
     State.
 
 %% pick_peer/4

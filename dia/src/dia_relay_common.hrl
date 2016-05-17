@@ -4,3 +4,5 @@
 -record(payload_request, {direction,
 						  src_node_name,
 						  rcv_process_name}).
+
+-define(LOG_FILE, "relay.log").

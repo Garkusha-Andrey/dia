@@ -5,6 +5,7 @@
 -module(relay_manager).
 
 -include_lib("../../controller/src/controller_app.hrl").
+-include_lib("dia_relay_common.hrl").
 
 %% ====================================================================
 %% API functions
@@ -19,6 +20,10 @@
 -define(REALM_ID, 'nfv.ru').
 
 start(T) ->
+	
+	{ok, Log} = file:open(?LOG_FILE, [write]),
+	erlang:group_leader(Log, self()),
+	
 	SwitchIP = case inet_parse:address(atom_to_list(lists:nth(1, T))) of
 		{ok, IP}  		-> IP;
 		{error, Reason} -> io:format("Bad Addr: ~w. Reason ~w ~n", [lists:nth(1, T), Reason])
@@ -37,8 +42,6 @@ ping() ->
 	Srv = #servers{portIpAddr = {{127,0,0,1}, 1234},
 				   realmId = 111, realmHost='ex.sc'},
 	{relay_manager, node()} ! {add_server, Srv}.
-
-%%TODO: Add list_server_connections
 
 %% ====================================================================
 %% Internal functions

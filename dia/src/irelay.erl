@@ -4,6 +4,7 @@
 -include_lib("diameter/include/diameter.hrl").
 -include_lib("diameter/include/diameter_gen_base_rfc6733.hrl").
 
+-include_lib("dia_relay_common.hrl").
 
 %% ====================================================================
 %% API functions
@@ -38,6 +39,9 @@ init(NodeName) ->
 %% irelay:deploy(['ir1','ex.ru','127.0.0.1','3911']). - from Erlang mashine
 %% erl -s irelay deploy 'ir1' 'ex.com' "127.0.0.1" 3911 - from bash
 deploy(T) ->
+	{ok, Log} = file:open(?LOG_FILE, [write]),
+	erlang:group_leader(Log, self()),
+	
     Name  = lists:nth(1, T),
 	Realm = lists:nth(2, T),
 	{ok, LIp} = inet_parse:address(atom_to_list(lists:nth(3, T))),

@@ -56,6 +56,9 @@ init() ->
 %% deploy/1 ([<Name>, <Ralm>, <local IP>, <remote IP>, <Port>])
 %% deploy([c1, 'ex.ru', {127,0,0,1}, {127,0,0,1}, 3911]).
 deploy(T) ->
+	{ok, Log} = file:open(?LOG_FILE, [write]),
+	erlang:group_leader(Log, self()),
+
 	Name = lists:nth(1, T),
 	Realm = lists:nth(2, T),
 	LIp = lists:nth(3, T),
@@ -83,8 +86,11 @@ start(Name, Realm, Opts) ->
 connect(Name, {tcp, _LIp, RIp, Port} = T) ->
     Connection = node:connect(Name, T),
 	case Connection of
-		{ok, _}		-> orelay_listener(Name, RIp, Port);
-		{error, _} 	-> io:fwrite("ORelay not connected to server")
+		{ok, _}		-> file:write_file(?LOG_FILE,
+						io_lib:fwrite("~p connected to server ~p:~w ~n", [node(), RIp, Port])),
+					   orelay_listener(Name, RIp, Port);
+		{error, _} 	-> file:write_file(?LOG_FILE,
+						io_lib:fwrite("~p failed connection to server ~p:~w ~n", [node(), RIp, Port]))
 	end
 .
 

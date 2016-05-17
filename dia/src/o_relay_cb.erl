@@ -5,6 +5,8 @@
 -include_lib("diameter/include/diameter.hrl").
 -include_lib("diameter/include/diameter_gen_base_rfc3588.hrl").
 
+-include_lib("dia_relay_common.hrl").
+
 %% ====================================================================
 %% API functions
 %% ====================================================================
@@ -21,8 +23,9 @@
 
 %% peer_up/3
 
-peer_up(_SvcName, _Peer, State) ->
+peer_up(_SvcName, Peer, State) ->
 	io:format("o_relay_cb::peer_up ~n"),
+	file:write_file("o_reley.log", io_lib:fwrite("~p connected to server ~p: ~n", [node(), Peer])),
     State.
 
 %% peer_down/3

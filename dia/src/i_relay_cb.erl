@@ -30,12 +30,13 @@
 %% Callback implementation
 %% ====================================================================
 
-peer_up(_SvcName, _Peer, State) ->
-	io:format("i_relay_cb::peer_up~n"),
+peer_up(_SvcName, Peer, State) ->
+	io:format("irelay_cb::peer_up ~n"),
+	file:write_file("ireley.log", io_lib:fwrite("~p connected to client ~p: ~n", [node(), Peer])),
     State.
 
 peer_down(_SvcName, _Peer, State) ->
-	io:format("i_relay_cb::peer_down~n"),
+	io:format("irelay_cb::peer_down ~n"),
     State.
 
 pick_peer(_, _, _SvcName, _State) ->
