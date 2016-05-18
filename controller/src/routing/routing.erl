@@ -16,34 +16,41 @@
 -define(FULL_MASK, "255.255.255.255").
 
 init()->
-        case ets:info(table) of
-                undefined ->
-                        ets:new(table, [set, named_table,public]);
-                _ ->
-                        do_nothing
-        end,
-
-    ets:insert(table, {instances, []}),
-    ets:insert(table, {freeChunks,
-                       [{X,0} || X <- lists:seq(0, ?NUM_CHUNKS-1)]}),
-
-    restconf:table_delete(0),
-
     {IpInt, MaskInt} = controller_lib:get_ovsIp(),
     {IpExt, MaskExt} = controller_lib:get_publicIp(),
 
-    lists:foreach(fun(A) -> restconf:flow_send(A) end,
-                  flows:defaults(arp,
-                                [IpInt,MaskInt,
-                                 IpExt,MaskExt])),
+    Results =
+	[restconf:table_delete(0) |
 
-    lists:foreach(fun(A) -> restconf:flow_send(A) end,
-                  flows:defaults(ip,
-                                [IpInt,IpExt,
-                                 controller_lib:get_ovsMac(),
-                                 controller_lib:get_extGwMac()])),
+	 lists:map(fun(A) -> restconf:flow_send(A) end,
+		   flows:defaults(arp,
+				  [IpInt,MaskInt,
+				   IpExt,MaskExt]))]
+	++
+	lists:map(fun(A) -> restconf:flow_send(A) end,
+		  flows:defaults(ip,
+				 [IpInt,IpExt,
+				  controller_lib:get_ovsMac(),
+				  controller_lib:get_extGwMac()])),
 
-    update().
+    case lists:filter(fun(Res) -> Res=/=ok end, Results) of
+	[] ->
+	    case ets:info(table) of
+		undefined ->
+		    ets:new(table, [set, named_table,public]);
+                _ ->
+		    do_nothing
+	    end,
+
+	    ets:insert(table, {instances, []}),
+	    ets:insert(table, {freeChunks,
+			       [{X,0} || X <- lists:seq(0, ?NUM_CHUNKS-1)]}),
+
+	    update();
+
+	_ ->
+	    tryagain
+    end.
 
 update()->
     test_update(2).
