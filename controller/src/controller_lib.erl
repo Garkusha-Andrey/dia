@@ -13,6 +13,7 @@
          get_remotePeerIp/1,
          get_dianode/1,
          get_weight/1,
+		 initialize_routing/1,
 
 %% Routing interface
          get_ovsIp/0,
@@ -578,3 +579,18 @@ check_transaction(Result, ErrMsg) ->
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
+%% ====================================================================
+%% Initializes the routing.
+%% If the initialization has failed, wait 1 sec. and try again.
+%% ====================================================================
+initialize_routing(0) ->
+	error_logger:error_report("ERROR: Routing has not been initialized in 10 retries!!!");
+initialize_routing(Tries) ->
+	case routing:init() of
+		tryagain ->
+			timer:sleep(1000),
+			initialize_routing(Tries - 1);
+		_ ->
+			%%Initialized:
+            ok
+	end.

@@ -9,9 +9,8 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([ask/1, install/1,
+-export([install/1,
 		 change_configuration/1,
-		 change_configuration/2,
 		 parse_service_config/1,
 		 clodify_done/0,
 		 clients_updated/0]).
@@ -25,13 +24,16 @@
 %% @doc Must be called from script or erlang shell
 install(Nodes) ->
 	io:format("~nI am in install() for nodes ~p~n",[Nodes]),
-	Res = rpc:multicall(Nodes, application, start, [mnesia]),
+	%%Start needed applications on all nodes:
+	rpc:multicall(Nodes, application, start, [mnesia]),
 	rpc:multicall(Nodes, application, start, [inets]),
-	io:format("Res is ~p~n",[Res]),
+	
+	%%Start needed ETS tables:
 	ets:new(diaNodes, [set, named_table, {keypos, 2}, public]),
 	ets:new(sd_table, [set, named_table, {keypos, 2}, public]),
 	ets:new(tbd_table,[set, named_table, {keypos, 2}, public]),
 
+	%%Distribute all mnesia tables:
 	MnesiaConfig = mnesia:change_config(extra_db_nodes, Nodes),
 	io:format("MnesiaConfig is ~p~n",[MnesiaConfig]),
 	case mnesia:change_config(extra_db_nodes, Nodes) of
@@ -124,18 +126,17 @@ install(Nodes) ->
 	end,
 	Nodes = [node()| nodes()],
 	install(Nodes),
-	wait_for_tables(),
-	parse_service_config("../src/service_config"),
+	controller_lib:initialize_routing(10),
+	wait_for_tables(),	
     controller_sub:start_link();
 start(normal, []) ->
-	io:format("~n Before install!!! ~n"),
+	io:format("~n Start normally! ~n"),
 	Nodes = [node()| nodes()],
 	install(Nodes),
 	wait_for_tables(),
-	parse_service_config("../src/service_config"),
     controller_sub:start_link();
 start({takeover, OtherNode}, []) ->
-	io:format("I am in takeover for the node ~p~n",[OtherNode]),
+	io:format("Takeover for the node ~p is started!~n",[OtherNode]),
 	case application:get_application(mnesia) of
 		undefined ->
 			application:start(mnesia);
@@ -145,7 +146,7 @@ start({takeover, OtherNode}, []) ->
 	Nodes = [node()| nodes()],
 	install(Nodes),
 	wait_for_tables(),
-	parse_service_config("../src/service_config"),
+	controller_lib:initialize_routing(10),
     controller_sub:start_link().
 
 %% stop/1
@@ -161,17 +162,14 @@ stop(_State) ->
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
-ask(Question) ->
-    controller_server:ask(Question).
-
-change_configuration(diaLocal, Arg) ->	
-	controller_server:change_configuration(diaLocal, Arg);
-change_configuration(diaIp, Arg) ->
-	controller_server:change_configuration(diaIp, Arg).
+%%Configure instances:
 change_configuration(Args) ->
-	timer:sleep(5000),
+	timer:sleep(10000),
 	controller_server:change_configuration(Args).
 
+%% ====================================================================
+%%Wait until the mnesia is connected.
+%% ====================================================================
 wait_for_tables() ->
 	mnesia:wait_for_tables([diaConnections,
 							diaLocalConfig,
@@ -181,12 +179,17 @@ wait_for_tables() ->
 							clients], 
 						   15000).
 
+%% ====================================================================
+%%Parse configuration of servers.
+%% ====================================================================
 parse_service_config(InputFileName) ->
 	Device = open_file(InputFileName, read),
     read_lines(Device, []),
     close_file(Device).
 
-
+%% ====================================================================
+%%Helper functions for parse_service_config/1.
+%% ====================================================================
 open_file(FileName, Mode) ->
     {ok, Device} = file:open(FileName, [Mode, binary]),
     Device.
@@ -220,10 +223,19 @@ read_lines(Device, L) ->
 			Bin
     end.
 
-
+%% ====================================================================
+%% Calls from cloudify to start parse the current server configuration
+%% and distribute the diameter instances per server.
+%% ====================================================================
 clodify_done() ->
+	parse_service_config("../src/service_config"),
 	controller_server:initial_distribution().
   
-
+%% ====================================================================
+%% Calls by diameter application to "tell" Routing that clients 
+%% configuration has been updated.
+%% ====================================================================
 clients_updated() ->
 	controller_server:clients_updated().
+
+

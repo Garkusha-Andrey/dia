@@ -1,7 +1,5 @@
 %% @author Aleksandra
 %% @doc @todo Add description to controller_server.
-
-
 -module(controller_server).
 -behaviour(gen_server).
 -export([start_link/0, stop/0, check_tables/1]).
@@ -11,8 +9,7 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([change_configuration/1,
-		 change_configuration/2]).
+-export([change_configuration/1]).
 -include("controller_app.hrl").
 
 %% ====================================================================
@@ -37,23 +34,24 @@ init([]) ->
 	net_kernel:monitor_nodes(true),
     {ok, []}.
 
-
+%%Start Appl server:
 start_link() ->
     gen_server:start_link({global, ?MODULE}, ?MODULE, [], []).
 
+%%Stop Appl server:
 stop() ->
     gen_server:call({global, ?MODULE}, stop).
 
-change_configuration(diaLocal, Args) -> 
-    gen_server:cast({global, ?MODULE}, {new_config_diaLocal, Args});
-change_configuration(diaIp, Args) -> 
-    gen_server:cast({global, ?MODULE}, {new_config_diaIp, Args}).
+%%Cast to server to configure the instances:
 change_configuration(Args) -> 
     gen_server:cast({global, ?MODULE}, {new_config, Args}).
 
-initial_distribution() ->
-	gen_server:call({global, ?MODULE}, initial_distribution).
 
+%%Call to Server to distribute the diamters per server (30 sec is enough?):
+initial_distribution() ->
+	gen_server:call({global, ?MODULE}, initial_distribution, 30000).
+
+%%Cast to server to tell to routing about updated clients:
 clients_updated() ->
 	gen_server:cast({global, ?MODULE}, clients_updated).
 
@@ -74,10 +72,6 @@ clients_updated() ->
 	Timeout :: non_neg_integer() | infinity,
 	Reason :: term().
 %% ====================================================================
-handle_call(question, _From, State) ->
-    {ok, Answers} = application:get_env(controller_app, answers),
-    Answer = element(random:uniform(tuple_size(Answers)), Answers),
-    {reply, Answer, State};
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
 handle_call({check_tables, Node}, _From, State) ->
@@ -101,7 +95,7 @@ handle_call(_Call, _From, State) ->
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
 handle_cast({new_config,[diameter, Enode, LocalIp, LocalMac]}, State) ->
-
+	%%Configure of just started diameter instance:
 	F = fun() ->
 		mnesia:write(#diaConnections{nodeId = Enode}),
 		mnesia:write(#diaLocalConfig{nodeId = Enode, 
@@ -110,8 +104,9 @@ handle_cast({new_config,[diameter, Enode, LocalIp, LocalMac]}, State) ->
     end,
     mnesia:activity(transaction, F),
 	{noreply, State};
-handle_cast({new_config,[OVSIntIp, OVSIntMask, PublicIp, PublicMask, OVSMac, ExtGwMac]}, State) ->
-	
+handle_cast({new_config,[OVSIntIp, OVSIntMask, PublicIp,
+						 PublicMask, OVSMac, ExtGwMac]}, State) ->
+	%%configure Global Data for controller:
 	F = fun() ->
 		mnesia:write(#globalData{ovsIpMask = {atom_to_list(OVSIntIp),
 						      atom_to_list(OVSIntMask)},
@@ -123,16 +118,10 @@ handle_cast({new_config,[OVSIntIp, OVSIntMask, PublicIp, PublicMask, OVSMac, Ext
     end,
 
     mnesia:activity(transaction, F),
-	routing:init(),
+	controller_lib:initialize_routing(10),
 	{noreply, State};
-handle_cast({new_config_diaLocal,IpAddress}, State) ->
-	F = fun() ->
-        mnesia:write(#diaLocalConfig{ipAddress = IpAddress})
-    end,
-    mnesia:activity(transaction, F),
-	{noreply, State};
-
 handle_cast(clients_updated, State) ->
+	%%Updating of routing:
 	routing:update(),
     {noreply, State};
 
@@ -151,6 +140,7 @@ handle_cast(_Cast, State) ->
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
 handle_info({nodeup, Node}, State) ->
+	io:format("Node ~p is up!~n",[Node]),
 	rpc:call(Node, application, start, [mnesia]),
 	rpc:call(Node, application, start, [inets]),
 	check_tables(Node),
@@ -159,12 +149,12 @@ handle_info({nodeup, Node}, State) ->
 		1 ->
 			ets:insert(diaNodes, {node, Node});
 		0 ->
+			%%Not diameter node:
 			do_nothing
 	end,
-	
 	{noreply, State};
 handle_info({nodedown, Node}, State) ->
-	%% do smth
+	io:format("Node ~p is down!~n",[Node]),
     NodeL = atom_to_list(Node),
 	case string:str(NodeL, "diameter") of
 		1 ->
@@ -181,7 +171,6 @@ handle_info({nodedown, Node}, State) ->
 	{noreply, State};
 handle_info(_Info, State) ->
     {noreply, State}.
-
 
 
 %% terminate/2
@@ -211,7 +200,7 @@ code_change(_OldVsn, State, _Extra) ->
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
-
+%%Distribute the nesia tables for new node:
 check_tables(Node) ->
 	case mnesia:change_config(extra_db_nodes, [Node]) of
 		{ok, [Node]} ->
@@ -273,7 +262,8 @@ check_tables(Node) ->
 		_ ->
 			do_nothing
 	end.
-	
+
+%%Re-distribution of diameters per servers:
 redistribute_servers() ->
 	Servers = get_not_distributed_servers(),
 	Nodes = get_nodes(),
@@ -287,6 +277,7 @@ redistribute_servers() ->
 			distribute_server_per_node(Servers, NewNodes)
 end.
 
+%%Helper function for redistribute_servers/1:
 get_nodes_from_servers(Nodes) ->
 	lists:foldr(fun(Node, Acc) ->
 						F = fun() -> 
@@ -316,7 +307,8 @@ get_nodes_from_servers(Nodes) ->
 				[],
 				Nodes).
 	
-									  
+
+%%Initial distribution of diameters per server:
 initial_servers_distribution() ->
 	DistrServers = controller_lib:list_servers(),
 	Servers = case DistrServers of
@@ -338,7 +330,7 @@ initial_servers_distribution() ->
 	check_distribution(DistrServers, RedistrServers),
 	routing:update().
 
-
+%%Helper functions for initial_servers_distribution/0:
 distribute_server_per_node([], _Nodes) ->
 	ok;
 distribute_server_per_node([Server | _Servers] = TotServers, Nodes) ->
@@ -365,6 +357,7 @@ get_nodes() ->
 			  end,
 			  Nodes).
 
+%%Store distribution into servers table:
 store_nodeId(Server, NodeId) ->
 	Key = Server#servers.portIpAddr,
 	F = fun() ->
@@ -383,6 +376,7 @@ store_nodeId(Server, NodeId) ->
 			Table
 	end.
 
+%%Helper functions:
 get_all_servers_realm(RealmId) ->
 	F = fun() ->
 				PortIp = mnesia:all_keys(servers),
@@ -408,6 +402,8 @@ get_all_servers_realm(RealmId) ->
 		{atomic, Servers} ->
 			Servers
 	end.
+
+%%Get all not yet distributed servers:
 get_not_distributed_servers() ->
 	F = fun() ->
 				PortIp = mnesia:all_keys(servers),
@@ -434,6 +430,7 @@ get_not_distributed_servers() ->
 			Servers
 	end.
 
+%%Terminate TCP connection if distribution changed:
 check_distribution(BServers, AServers) ->
 	lists:foreach(fun(#servers{portIpAddr = {Port, Ip}} = BServer ) ->
 						  AServer = lists:keyfind({Port, Ip}, 2, AServers),
