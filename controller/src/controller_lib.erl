@@ -560,7 +560,7 @@ delete_client_port_ipaddr(Port, IpAddress) ->
 list_clients() ->
     F = fun() ->
                 lists:map(fun(Key) ->
-				  mnesia:read(clients, Key)
+				  lists:last(mnesia:read(clients, Key))
 			  end, mnesia:all_keys(clients))
         end,
     check_transaction(mnesia:transaction(F), "Failed to get clients").
