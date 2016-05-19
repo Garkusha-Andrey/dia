@@ -581,14 +581,15 @@ check_transaction(Result, ErrMsg) ->
 %% ====================================================================
 %% ====================================================================
 %% Initializes the routing.
-%% If the initialization has failed, wait 1 sec. and try again.
+%% If the initialization has failed, wait 15 sec. and try again.
+%% Error will be detected if routing has not initialized in 5 minutes.
 %% ====================================================================
 initialize_routing(0) ->
 	error_logger:error_report("ERROR: Routing has not been initialized in 10 retries!!!");
 initialize_routing(Tries) ->
 	case routing:init() of
 		tryagain ->
-			timer:sleep(1000),
+			timer:sleep(15000),
 			initialize_routing(Tries - 1);
 		_ ->
 			%%Initialized:

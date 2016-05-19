@@ -118,7 +118,7 @@ handle_cast({new_config,[OVSIntIp, OVSIntMask, PublicIp,
     end,
 
     mnesia:activity(transaction, F),
-	controller_lib:initialize_routing(10),
+	controller_lib:initialize_routing(20),
 	{noreply, State};
 handle_cast(clients_updated, State) ->
 	%%Updating of routing:

@@ -126,7 +126,7 @@ install(Nodes) ->
 	end,
 	Nodes = [node()| nodes()],
 	install(Nodes),
-	controller_lib:initialize_routing(10),
+	controller_lib:initialize_routing(20),
 	wait_for_tables(),	
     controller_sub:start_link();
 start(normal, []) ->
@@ -146,7 +146,7 @@ start({takeover, OtherNode}, []) ->
 	Nodes = [node()| nodes()],
 	install(Nodes),
 	wait_for_tables(),
-	controller_lib:initialize_routing(10),
+	controller_lib:initialize_routing(20),
     controller_sub:start_link().
 
 %% stop/1
