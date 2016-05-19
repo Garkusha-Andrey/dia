@@ -124,10 +124,10 @@ if [ $APPLICATION = "" ]; then
 		if [ "$CPRIO" != "" ]
 		then
 			Enode=controller`echo $CPRIO`@`echo $LOCALIP`
-			nohup erl -detached -name $Enode -s boot start -s controller_app change_configuration \
+			setsid erl -detached -name $Enode -s boot start -s controller_app change_configuration \
 			    $OVSIntIp $OVSIntMask $PublicIp $PublicMask $OVSMac $ExtGwMac \
 			    -setcookie 'ABCD' \
-			    -config ../config/controller`echo $CPRIO`.config
+			    -config ../config/controller`echo $CPRIO`.config > `echo $Enode`.log
 		else
 			echo "You are trying to start the controller application. You need specify the configuration parameters of Diameters!\n"
 			usage
@@ -147,16 +147,16 @@ else
 				then
 					echo "Then != controller_app"
 					Enode=controller`echo $CPRIO`@`echo $LOCALIP`
-					nohup erl -detached -name $Enode -s boot start $RNODE -s controller_app change_configuration \
+					setsid erl -detached -name $Enode -s boot start $RNODE -s controller_app change_configuration \
 					    $OVSIntIp $OVSIntMask $PublicIp $PublicMask $OVSMac $ExtGwMac \
 					    -setcookie 'ABCD' \
-					    -config ../config/controller`echo $CPRIO`.config
+					    -config ../config/controller`echo $CPRIO`.config > `echo $Enode`.log
 				else
 					Enode=controller`echo $CPRIO`@`echo $LOCALIP`
-					nohup erl -detached -name $Enode -s boot start -s $APPLICATION change_configuration \
+					setsid erl -detached -name $Enode -s boot start -s $APPLICATION change_configuration \
 					    $OVSIntIp $OVSIntMask $PublicIp $PublicMask $OVSMac $ExtGwMac \
 					    -setcookie 'ABCD' \
-					    -config ../config/controller`echo $CPRIO`.config
+					    -config ../config/controller`echo $CPRIO`.config > `echo $Enode`.log
 				fi
 			else
 				echo "You are trying to start the controller application. You need specify the configuration parameters of Diameters!\n"
@@ -166,9 +166,9 @@ else
 		else
 			echo "You are trying to start the controller application. You need specify the priority of Controller App!\n"
 			Enode=controller`echo $CPRIO`@`echo $LOCALIP`
-					nohup erl -detached -name $Enode -s application start inets -s boot start -s $APPLICATION change_configuration \
+					setsid erl -detached -name $Enode -s application start inets -s boot start -s $APPLICATION change_configuration \
 					    $OVSIntIp $OVSIntMask $PublicIp $PublicMask $OVSMac $ExtGwMac \
-					    -setcookie 'ABCD'
+					    -setcookie 'ABCD' > `echo $Enode`.log
 		fi
 	else
 		if [ "$APPLICATION" = "diameter" ]; then
@@ -181,12 +181,12 @@ else
 				InboundRalayName=ir`echo $DIAINSTID`
 				REALM='nfv.ru'
 				INBOUND_RELAY_PORT=3911
-				nohup erl -detached -name $DEnode \
+				setsid erl -detached -name $DEnode \
 				 -s irelay deploy $InboundRalayName $REALM $PublicIp $INBOUND_RELAY_PORT \
 				 -s relay_manager start $PublicIp \
 				 -s boot start $RNODE \
 				 -s controller_app change_configuration \
-				  diameter $DEnode $LOCALIP $DIAMETER_MAC -setcookie 'ABCD'
+				  diameter $DEnode $LOCALIP $DIAMETER_MAC -setcookie 'ABCD'  > `echo $Enode`.log
 			else
 				echo "You need specify the one Controller node to start Diameter instance!\n"
 				usage
