@@ -21,8 +21,10 @@
 
 start(T) ->
 	
-	{ok, Log} = file:open(?LOG_FILE, [write]),
+	{ok, Log} = file:open(?LOG_FILE, [append]),
 	erlang:group_leader(Log, self()),
+
+    io:format("Just test string ~n"),
 	
 	SwitchIP = case inet_parse:address(atom_to_list(lists:nth(1, T))) of
 		{ok, IP}  		-> IP;

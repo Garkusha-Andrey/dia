@@ -37,6 +37,7 @@ peer_up(_SvcName, Peer, State) ->
 
 peer_down(_SvcName, _Peer, State) ->
 	io:format("irelay_cb::peer_down ~n"),
+	file:write_file("o_reley.log", io_lib:fwrite("~p connection down with client ~n", [node()])),
     State.
 
 pick_peer(_, _, _SvcName, _State) ->

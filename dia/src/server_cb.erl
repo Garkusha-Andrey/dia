@@ -66,7 +66,7 @@ handle_error(_Reason, _Request, _SvcName, _Peer) ->
 %% A request whose decode was successful ...
 handle_request(#diameter_packet{header = Header, msg = Req, errors = []} = Pkt, _SvcName, {_, Caps})
   when is_record(Req, diameter_base_RAR) ->
-	io:format("server_cb::handle_request RAR diameter message\n"),
+	io:format("server_cb::I`ve got a msg. I will try to reply. handle_request 1"),
     #diameter_caps{origin_host = {OH,_},
                    origin_realm = {OR,_}}
         = Caps,
@@ -77,8 +77,8 @@ handle_request(#diameter_packet{header = Header, msg = Req, errors = []} = Pkt, 
 					 end_to_end_id = EndToEndId}
 		= Header,
 	
-	io:fwrite("server_cb:: HopByHopId: ~p, EndToEndId: ~p \n", [HopByHopId, EndToEndId]),
-	io:fwrite("server_cb::handle_request ~p ~n", [Req]),
+	%%io:fwrite("server_cb:: HopByHopId: ~p, EndToEndId: ~p \n", [HopByHopId, EndToEndId]),
+	%%io:fwrite("server_cb::handle_request ~p ~n", [Req]),
 	
 	HeaderAnswer = #diameter_header{%%hop_by_hop_id = HopByHopId,
 									end_to_end_id = EndToEndId},
@@ -96,7 +96,7 @@ handle_request(#diameter_packet{header = Header, msg = Req, errors = []} = Pkt, 
 %% diameter will set Result-Code and Failed-AVP's.
 handle_request(#diameter_packet{msg = Req}, _SvcName, {_, Caps})
   when is_record(Req, diameter_base_RAR) ->
-	io:format("server_cb::handle_request 2"),
+	io:format("server_cb::I`ve got a msg. I will try to reply. handle_request 2"),
     #diameter_caps{origin_host = {OH,_},
                    origin_realm = {OR,_}}
         = Caps,
