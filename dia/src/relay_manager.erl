@@ -60,11 +60,11 @@ relay_manager_listener(IPsrc, Index) ->
 			{Portdst, IPdst_list} = Server#servers.portIpAddr,
 			{ok, IPdst} = inet_parse:address(IPdst_list),
 
-			spawn(orelay, deploy, [[ServiceName, RealmID, IPsrc, IPdst, Portdst]]),
+			spawn(orelay, deploy, [[ServiceName, RealmID, IPsrc, IPdst, Portdst]]);
 			
 			%% It is not working when starts from bash
 			%%ets:insert(?RELAY_MANAGER_SERVER_TABLE, {ServiceName, RealmID, IPsrc, IPdst, Portdst}),
-			io:fwrite("Add server: ~w ~w ~w ~w ~w ~n", [ServiceName, RealmID, IPsrc, IPdst, Portdst]);
+			%%io:format("Add server: ~w ~w ~w ~w ~w ~n", [ServiceName, RealmID, IPsrc, IPdst, Portdst]);
 		UnexpectedMsg ->
 			io:fwrite("relay_manager received an unexpected msg: ~w ~n", [UnexpectedMsg])
 	end,
