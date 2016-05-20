@@ -56,7 +56,7 @@ init() ->
 %% deploy/1 ([<Name>, <Ralm>, <local IP>, <remote IP>, <Port>])
 %% deploy([c1, 'ex.ru', {127,0,0,1}, {127,0,0,1}, 3911]).
 deploy(T) ->
-	{ok, Log} = file:open(?LOG_FILE, [write]),
+	{ok, Log} = file:open(?LOG_FILE, [append]),
 	erlang:group_leader(Log, self()),
 
 	Name = lists:nth(1, T),
