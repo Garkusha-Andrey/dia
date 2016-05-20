@@ -149,8 +149,12 @@ handle_info({nodeup, Node}, State) ->
 		1 ->
 			ets:insert(diaNodes, {node, Node});
 		0 ->
-			%%Not diameter node:
-			do_nothing
+			case string:str(NodeL, "controller") of
+				1 ->
+					rpc:call(Node, controller_app, start, [{takeover, Node}, []]);
+				0 ->
+			        do_nothing
+			end
 	end,
 	{noreply, State};
 handle_info({nodedown, Node}, State) ->
