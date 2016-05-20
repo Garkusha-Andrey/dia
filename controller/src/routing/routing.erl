@@ -1,8 +1,9 @@
 -module(routing).
 
--export([init/0, update/0,
+-export([init/0, update/0
         %% for test
-         test_update/1]).
+        %% ,test_update/1
+	]).
 
 -include("../controller_app.hrl").
 
@@ -15,7 +16,7 @@
 -define(NUM_CHUNKS, 8).
 -define(FULL_MASK, "255.255.255.255").
 
-init()->
+send_basic_flows()->
     {IpInt, MaskInt} = controller_lib:get_ovsIp(),
     {IpExt, MaskExt} = controller_lib:get_publicIp(),
 
@@ -35,6 +36,14 @@ init()->
 
     case lists:filter(fun(Res) -> Res=/=ok end, Results) of
 	[] ->
+	    ok;
+	_ ->
+	    error
+    end.
+
+init()->
+    case send_basic_flows() of
+	ok ->
 	    case ets:info(table) of
 		undefined ->
 		    ets:new(table, [set, named_table,public]);
@@ -46,13 +55,16 @@ init()->
 	    ets:insert(table, {freeChunks,
 			       [{X,0} || X <- lists:seq(0, ?NUM_CHUNKS-1)]}),
 
-	    update();
+	    update(nobasic);
 
 	_ ->
 	    tryagain
     end.
 
+update(nobasic)->
+    test_update(2).
 update()->
+    send_basic_flows(),
     test_update(2).
 test_update(_Iteration)->
 
