@@ -61,7 +61,7 @@ get_all_diameters() ->
         {aborted, Reason} ->
             io:format("ERROR: Immpossible to get diaLocalConfig due to ~p~n",[Reason]);
         {atomic, ResultOfFun} ->
-            lists:append(ResultOfFun)
+            ResultOfFun
     end.
 
 list_connections() ->
