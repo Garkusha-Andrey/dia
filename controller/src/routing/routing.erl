@@ -42,6 +42,7 @@ send_basic_flows()->
     end.
 
 init()->
+    rlog:log("routing being initialized..~n", []),
     case send_basic_flows() of
 	ok ->
 	    case ets:info(table) of
