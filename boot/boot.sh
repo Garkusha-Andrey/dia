@@ -127,7 +127,7 @@ if [ $APPLICATION = "" ]; then
 			setsid erl -detached -name $Enode -s boot start -s controller_app change_configuration \
 			    $OVSIntIp $OVSIntMask $PublicIp $PublicMask $OVSMac $ExtGwMac \
 			    -setcookie 'ABCD' \
-			    -config ../config/controller`echo $CPRIO`.config > `echo $Enode`.log
+			    -config ../config/controller`echo $CPRIO`.config >/dev/null 2>&1 < /dev/null
 		else
 			echo "You are trying to start the controller application. You need specify the configuration parameters of Diameters!\n"
 			usage
@@ -150,13 +150,13 @@ else
 					setsid erl -detached -name $Enode -s boot start $RNODE -s controller_app change_configuration \
 					    $OVSIntIp $OVSIntMask $PublicIp $PublicMask $OVSMac $ExtGwMac \
 					    -setcookie 'ABCD' \
-					    -config ../config/controller`echo $CPRIO`.config > `echo $Enode`.log
+					    -config ../config/controller`echo $CPRIO`.config >/dev/null 2>&1 < /dev/null
 				else
 					Enode=controller`echo $CPRIO`@`echo $LOCALIP`
 					setsid erl -detached -name $Enode -s boot start -s $APPLICATION change_configuration \
 					    $OVSIntIp $OVSIntMask $PublicIp $PublicMask $OVSMac $ExtGwMac \
 					    -setcookie 'ABCD' \
-					    -config ../config/controller`echo $CPRIO`.config > `echo $Enode`.log
+					    -config ../config/controller`echo $CPRIO`.config >/dev/null 2>&1 < /dev/null
 				fi
 			else
 				echo "You are trying to start the controller application. You need specify the configuration parameters of Diameters!\n"
@@ -168,7 +168,7 @@ else
 			Enode=controller`echo $CPRIO`@`echo $LOCALIP`
 					setsid erl -detached -name $Enode -s application start inets -s boot start -s $APPLICATION change_configuration \
 					    $OVSIntIp $OVSIntMask $PublicIp $PublicMask $OVSMac $ExtGwMac \
-					    -setcookie 'ABCD' > `echo $Enode`.log
+					    -setcookie 'ABCD' >/dev/null 2>&1 < /dev/null 
 		fi
 	else
 		if [ "$APPLICATION" = "diameter" ]; then
@@ -177,7 +177,7 @@ else
 				[ "$PublicIp" != "" ] && [ $DIAMETER_MAC != "" ]
 			then
 				echo "boot diam with rnode"
-				DEnode=diameter`echo $DIAINSTID`@`echo $LOCALIP`
+				DEnode=diameter_`echo $DIAINSTID`@`echo $LOCALIP`
 				InboundRalayName=ir`echo $DIAINSTID`
 				REALM='nfv.ru'
 				INBOUND_RELAY_PORT=3911
@@ -186,7 +186,7 @@ else
 				 -s relay_manager start $PublicIp \
 				 -s boot start $RNODE \
 				 -s controller_app change_configuration \
-				  diameter $DEnode $LOCALIP $DIAMETER_MAC -setcookie 'ABCD'  > `echo $Enode`.log
+				  diameter $DEnode $LOCALIP $DIAMETER_MAC -setcookie 'ABCD' >/dev/null 2>&1 < /dev/null
 			else
 				echo "You need specify the one Controller node to start Diameter instance!\n"
 				usage
