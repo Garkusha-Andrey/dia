@@ -33,6 +33,8 @@ function start {
 
   done < "$servers_config"
 
+  ERL_COMM="-s client_deploy start $ERL_COMM"
+
   START_COMM="erl -sname cli $ERL_COMM"
   eval $START_COMM
 }
@@ -40,7 +42,7 @@ function start {
 # main
 bin_dir=$1
 srv_bin=$1/client.beam
-config_file=$2
+config_file=`readlink -f $2`
 if [ ! -f "$srv_bin" ] || [ ! -f $config_file ]; then
     if [ ! -f "$srv_bin" ]; then
         echo "didn't find client.beam in $srv_bin"

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "deploy servers"
+echo "deploy clients"
 
 function usage() {
 cat <<HELP
@@ -40,7 +40,7 @@ function start {
 # main
 bin_dir=$1
 srv_bin=$1/server.beam
-config_file=$2
+config_file=`readlink -f $2`
 if [ ! -f "$srv_bin" ] || [ ! -f $config_file ]; then
     if [ ! -f "$srv_bin" ]; then
         echo "didn't find server.beam in $srv_bin"

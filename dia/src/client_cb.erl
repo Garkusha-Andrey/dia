@@ -67,6 +67,7 @@ prepare_request(#diameter_packet{msg = ['RAR' = T | Avps]}, _, {_, Caps}) ->
                {'Destination-Realm', DR}
              | Avps]};
 
+%% client:call(c1, user, "s1", "ex.com").
 prepare_request(#diameter_packet{msg = Rec} = Pkt, _, {_, Caps}) ->
 	io:format("client.cb::prepare_request 2~n Pkt: ~p~n", [Pkt]),
     #diameter_caps{origin_host = {OH, DH},
@@ -77,8 +78,10 @@ prepare_request(#diameter_packet{msg = Rec} = Pkt, _, {_, Caps}) ->
                                  'Origin-Realm' = OR},
 	
 	case {Msg#diameter_base_RAR.'Destination-Host', Msg#diameter_base_RAR.'Destination-Realm'} of
-		{"", ""} ->
+		{undefined, undefined} ->
 			io:fwrite("Destination is empty~n");
+			%%Msg#diameter_base_RAR.'Destination-Host' = DH,
+			%%Msg#diameter_base_RAR.'Destination-Realm' = DR;
 		{OHost, ORealm} ->
 			io:fwrite("Destination is not empty.~n Host ~p Realm: ~p~n", [OHost, ORealm])
 	end,

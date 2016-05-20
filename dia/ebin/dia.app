@@ -5,6 +5,7 @@
               {applications,[kernel,stdlib]},
               {mod,{dia_app,[]}},
               {env,[]},
-              {modules,[client,client_cb,dia_app,dia_sup,i_relay_cb,irelay,
-                        nfv_diameter_tcp,nfv_diameter_tcp_sup,node,o_relay_cb,
-                        orelay,relay_manager,server,server_cb]}]}.
+              {modules,[client,client_cb,client_deploy,dia_app,dia_sup,
+                        i_relay_cb,irelay,nfv_diameter_tcp,
+                        nfv_diameter_tcp_sup,node,o_relay_cb,orelay,
+                        relay_manager,server,server_cb]}]}.
