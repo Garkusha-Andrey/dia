@@ -27,11 +27,23 @@ install(Nodes) ->
 	%%Start needed applications on all nodes:
 	rpc:multicall(Nodes, application, start, [mnesia]),
 	rpc:multicall(Nodes, application, start, [inets]),
-	
+
 	%%Start needed ETS tables:
-	ets:new(diaNodes, [set, named_table, {keypos, 2}, public]),
-	ets:new(sd_table, [set, named_table, {keypos, 2}, public]),
-	ets:new(tbd_table,[set, named_table, {keypos, 2}, public]),
+        case ets:info(diaNodes) of
+            undefined ->
+                ets:new(diaNodes, [set, named_table, {keypos, 2}, public]);
+            _ -> do_nothing
+        end,
+	case ets:info(sd_table) of
+            undefined ->
+                ets:new(sd_table, [set, named_table, {keypos, 2}, public]);
+            _ -> do_nothing
+        end,
+        case ets:info(tbd_table) of
+            undefined ->
+                ets:new(tbd_table, [set, named_table, {keypos, 2}, public]);
+            _ -> do_nothing
+        end,
 
 	%%Distribute all mnesia tables:
 	MnesiaConfig = mnesia:change_config(extra_db_nodes, Nodes),
