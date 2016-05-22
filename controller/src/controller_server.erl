@@ -17,6 +17,8 @@
 %% ====================================================================
 %-record(state, {}).
 
+-define(RELAY_MGR,relay_manager).
+
 %% init/1
 %% ====================================================================
 %% @doc <a href="http://www.erlang.org/doc/man/gen_server.html#Module:init-1">gen_server:init/1</a>
@@ -376,7 +378,7 @@ store_nodeId(Server, NodeId) ->
 		{atomic, Table} ->
 			%% Workaround for diameter instead of mnesia listener
 			%% Send Server parameters to node to connect to the server
-			{relay_manager, NodeId} ! {add_server, Server},
+			{?RELAY_MGR, NodeId} ! {add_server, Server},
 			Table
 	end.
 
@@ -448,7 +450,7 @@ check_distribution(BServers, AServers) ->
 									  undefined ->
 										  do_nothing;
 									  _ ->
-										  {Pid, Node} ! terminate,
+										  {?RELAY_MGR, Node} ! {rm_server, BServer},
 										  case is_record(AServer, servers) of
 											  true ->
 												  AKey = AServer#servers.portIpAddr,
