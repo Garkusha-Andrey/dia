@@ -85,12 +85,15 @@ start(Name, Opts)
 
 connect(Name, Opts)
   when is_list(Opts) ->
+	io:fwrite("node.erl::connect(Name, Opts) ~n"),
     diameter:add_transport(Name, {connect, Opts});
 
 connect(Name, {T, Opts}) ->
+	io:fwrite("node.erl::connect(Name, {T, Opts}) ~n"),
     connect(Name, Opts ++ client_opts(T));
 
 connect(Name, T) ->
+	io:fwrite("node.erl::connect(Name, T) ~n"),
     connect(Name, [{connect_timer, 5000} | client_opts(T)]).
 
 %% listen/2
@@ -128,7 +131,8 @@ stop(Name) ->
 
 server_opts({T, Addr, Port}) ->
 	io:format("node.erl:: server_opts: mod: ~w addr: ~w port: ~w ~n", [T, Addr, Port]),
-    [{transport_module, tmod(T)},
+    [{watchdog_timer, 6000},
+	 {transport_module, tmod(T)},
      {transport_config, [{reuseaddr, true},
                          {ip, addr(Addr)},
                          {port, Port}]}];
@@ -148,7 +152,8 @@ client_opts({T, LA, RA, RP})
 
 client_opts({T, LA, RA, RP}) ->
 	io:format("node.erl:: client_opts: mod: ~w, ip: ~w, addr: ~w, port: ~w ~n", [T, LA, RA, RP]),
-    [{transport_module, tmod(T)},
+    [{watchdog_timer, 6000},
+	 {transport_module, tmod(T)},
      {transport_config, [{raddr, addr(RA)},
                          {rport, RP},
                          {reuseaddr, true}
