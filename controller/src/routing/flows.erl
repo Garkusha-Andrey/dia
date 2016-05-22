@@ -75,6 +75,7 @@ make(Type, DestinationIp, {SourceIp, SourceMask}, Port, Gateway) ->
             PortMatch = "";
         _ ->
             PortMatch = "
+    <ip-match><ip-protocol>6</ip-protocol></ip-match>
     <tcp-source-port>" ++ integer_to_list(Port) ++ "</tcp-source-port>"
     end,
 
