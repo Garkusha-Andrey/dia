@@ -133,6 +133,7 @@ pass_to_orelay(SvcName, Pkt = #diameter_packet{}, Caps = #diameter_caps{}) ->
 	send_reques_to_orelay(ListenerProcess, ORelay, Pkt),
 	
 	AnswerPkt = wait_for_orelay_answer(),
+	unregister(ListenerProcess),
 	AnswerPkt;
 pass_to_orelay(_SvcName, _Pkt, _Caps) ->
 	io:fwrite("ERROR: Something goes wrong! pass_to_orelay() didn't parse message ~n").
