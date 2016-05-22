@@ -26,8 +26,7 @@ function start {
     Port=$(echo $line | cut -d "," -f 4)
     NodeName=$(echo $HostID | cut -d "." -f 1)
 
-    echo "Realm: $RealmID, Host: $HostID, IP: $IP, Port: $Port"
-    #run_cur_host_xterm
+    #echo "Realm: $RealmID, Host: $HostID, IP: $IP, Port: $Port"
     local local_deploy="-s server deploy '$NodeName' '$RealmID' $IP $Port"
     ERL_COMM="$ERL_COMM $local_deploy"
 

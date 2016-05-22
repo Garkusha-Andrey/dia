@@ -27,7 +27,7 @@ function start {
     Port=$(echo $line | cut -d "," -f 5)
     NodeName=$(echo $HostID | cut -d "." -f 1)
 
-    echo "Realm: $RealmID, Host: $HostID, local IP: $LIP, server IP: $RIP Port: $Port"
+    #echo "Realm: $RealmID, Host: $HostID, local IP: $LIP, server IP: $RIP Port: $Port"
     local local_deploy="-s client deploy '$NodeName' '$RealmID' $LIP $RIP $Port"
     ERL_COMM="$ERL_COMM $local_deploy"
 

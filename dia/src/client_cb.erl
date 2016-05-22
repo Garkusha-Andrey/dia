@@ -35,21 +35,24 @@
 
 %% peer_up/3
 
-peer_up(_SvcName, Peer, State) ->
-	io:format("client.cb::peer_up ~p ~n", [Peer]),
-	file:write_file("client.log", io_lib:fwrite("~p connected to server ~p: ~n", [node(), Peer])),
+peer_up(_SvcName, {_, Caps}, State) ->
+	#diameter_caps{origin_host = {OH, DH},
+                   host_ip_address = {IPsrc, IPdst}}
+        = Caps, 
+	io:format("client: connection Up. ~p -> ~p ~n"
+			  "                       ~p -> ~p ~n",
+			  [OH, DH, IPsrc, IPdst]),
     State.
 
 %% peer_down/3
 
 peer_down(_SvcName, _Peer, State) ->
-	io:format("client.cb::peer_down ~n"),
+	io:format("client: connection Down.~n~n"),
     State.
 
 %% pick_peer/4
 
 pick_peer([Peer | _], _, _SvcName, _State) ->
-	io:format("client.cb::peer_peer~n"),
     {ok, Peer}.
 
 %% prepare_request/3
@@ -68,26 +71,21 @@ prepare_request(#diameter_packet{msg = ['RAR' = T | Avps]}, _, {_, Caps}) ->
              | Avps]};
 
 %% client:call(c1, user, "s1", "ex.com").
-prepare_request(#diameter_packet{msg = Rec} = Pkt, _, {_, Caps}) ->
-	io:format("client.cb::prepare_request 2~n Pkt: ~p~n", [Pkt]),
-    #diameter_caps{origin_host = {OH, DH},
-                   origin_realm = {OR, DR}}
+prepare_request(#diameter_packet{msg = Rec} = _Pkt, _, {_, Caps}) ->
+    #diameter_caps{origin_host = {OH, _DH},
+                   origin_realm = {OR, _DR}}
         = Caps,
-	
+
 	Msg = Rec#diameter_base_RAR{'Origin-Host' = OH,
                                  'Origin-Realm' = OR},
-	
+
 	case {Msg#diameter_base_RAR.'Destination-Host', Msg#diameter_base_RAR.'Destination-Realm'} of
 		{undefined, undefined} ->
 			io:fwrite("Destination is empty~n");
-			%%Msg#diameter_base_RAR.'Destination-Host' = DH,
-			%%Msg#diameter_base_RAR.'Destination-Realm' = DR;
-		{OHost, ORealm} ->
-			io:fwrite("Destination is not empty.~n Host ~p Realm: ~p~n", [OHost, ORealm])
+		{_OHost, _ORealm} ->
+			ok
+			%%io:fwrite("Destination is not empty.~n Host ~p Realm: ~p~n", [OHost, ORealm])
 	end,
-
-	io:fwrite("           Host (origin/destenation) : ~p, ~p ~n"
-			  "           Realm (origin/destenation): ~p, ~p ~n", [OH, DH, OR, DR]),
 
     {send, Msg}.
 
@@ -99,13 +97,17 @@ prepare_retransmit(Packet, SvcName, Peer) ->
 %% handle_answer/4 
 
 handle_answer(#diameter_packet{header = Header, msg = Msg}, _Request, _SvcName, _Peer) ->
-	io:format("client_cb::handle_answer:~n ~p~n", [Msg]),
+	#diameter_base_RAA{'Session-Id' = Id}
+			= Msg,
 	#diameter_header{hop_by_hop_id = HopByHopId,
-					 end_to_end_id = EndToEndId}
+					 end_to_end_id = _EndToEndId}
 			= Header,
+
+	io:format("client: Answer recieved [1] ~n"
+			 "             SessionId:   ~p ~n"
+			 "             HopByHopId:  ~p ~n",
+			 [Id, HopByHopId]),
 	
-	io:format("client_cb:: HopByHopId: ~p, EndToEndId: ~p\n"
-			 , [HopByHopId, EndToEndId]),
     {ok, Msg}.
 
 %% handle_error/4
@@ -116,5 +118,5 @@ handle_error(Reason, _Request, _SvcName, _Peer) ->
 %% handle_request/3
 
 handle_request(_Packet, _SvcName, _Peer) ->
-	io:format("client.cb::handle_request~n"),
+	io:format("client.cb::handle_request. ERROR~n"),
     erlang:error({unexpected, ?MODULE, ?LINE}).

@@ -39,13 +39,17 @@
 
 -define(UNEXPECTED, erlang:error({unexpected, ?MODULE, ?LINE})).
 
-peer_up(_SvcName, Peer, State) ->
-	io:format("server_cb::peer_up~n"),
-	file:write_file("server.log", io_lib:fwrite("~p connected to client ~p: ~n", [node(), Peer])),
+peer_up(_SvcName, {_, Caps}, State) ->
+	#diameter_caps{origin_host = {OH, DH},
+                   host_ip_address = {IPsrc, IPdst}}
+        = Caps, 
+	io:format("server: connection Up. ~p -> ~p ~n"
+			  "                       ~p -> ~p ~n",
+			  [OH, DH, IPsrc, IPdst]),
     State.
 
-peer_down(_SvcName, Peer, State) ->
-	io:format("server_cb::peer_down~n"),
+peer_down(_SvcName, _Peer, State) ->
+	io:format("server: connection Down.~n~n"),
     State.
 
 pick_peer(_, _, _SvcName, _State) ->
@@ -64,9 +68,9 @@ handle_error(_Reason, _Request, _SvcName, _Peer) ->
     ?UNEXPECTED.
 
 %% A request whose decode was successful ...
-handle_request(#diameter_packet{header = Header, msg = Req, errors = []} = Pkt, _SvcName, {_, Caps})
+handle_request(#diameter_packet{header = Header, msg = Req, errors = []} = _Pkt, _SvcName, {_, Caps})
   when is_record(Req, diameter_base_RAR) ->
-	io:format("server_cb::I`ve got a msg. I will try to reply. handle_request 1"),
+	
     #diameter_caps{origin_host = {OH,_},
                    origin_realm = {OR,_}}
         = Caps,
@@ -77,7 +81,10 @@ handle_request(#diameter_packet{header = Header, msg = Req, errors = []} = Pkt, 
 					 end_to_end_id = EndToEndId}
 		= Header,
 	
-	%%io:fwrite("server_cb:: HopByHopId: ~p, EndToEndId: ~p \n", [HopByHopId, EndToEndId]),
+	io:format("server: Request recieved [1] ~n"
+			 "             SessionId:   ~p ~n"
+			 "             HopByHopId:  ~p ~n",
+			 [Id, HopByHopId]),
 	%%io:fwrite("server_cb::handle_request ~p ~n", [Req]),
 	
 	HeaderAnswer = #diameter_header{%%hop_by_hop_id = HopByHopId,
@@ -96,12 +103,15 @@ handle_request(#diameter_packet{header = Header, msg = Req, errors = []} = Pkt, 
 %% diameter will set Result-Code and Failed-AVP's.
 handle_request(#diameter_packet{msg = Req}, _SvcName, {_, Caps})
   when is_record(Req, diameter_base_RAR) ->
-	io:format("server_cb::I`ve got a msg. I will try to reply. handle_request 2"),
     #diameter_caps{origin_host = {OH,_},
                    origin_realm = {OR,_}}
         = Caps,
     #diameter_base_RAR{'Session-Id' = Id}
         = Req,
+	
+	io:format("server: Request recieved [2]."
+			 "             SessionId:   ~p ~n",
+			 [Id]),
 
     {reply, #diameter_base_RAA{'Origin-Host' = OH,
                                'Origin-Realm' = OR,

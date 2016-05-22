@@ -96,12 +96,11 @@ call(Name, user, Realm, Host) ->
                              %% define final destenation [rfc 6733 ch. 6.1]
                              'Destination-Realm' = Realm,
 		                     'Destination-Host'  = Host},
-	
+
 	RAR_packet = #diameter_packet{msg = RAR},
-	
-	io:format("client.erl::call(~w)[user]~n"
-              "Msg: ~p ~n", [Name, RAR]),
-    diameter:call(Name, common, RAR_packet, []).
+
+    diameter:call(Name, common, RAR_packet, []),
+	ok.
 
 
 %% cast/1
