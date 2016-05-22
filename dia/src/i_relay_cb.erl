@@ -31,13 +31,11 @@
 %% ====================================================================
 
 peer_up(_SvcName, Peer, State) ->
-	io:format("irelay_cb::peer_up ~n"),
-	file:write_file("ireley.log", io_lib:fwrite("~p connected to client ~p: ~n", [node(), Peer])),
+	io:format("irelay_cb::peer_up ~p connected to client ~p: ~n", [node(), Peer]),
     State.
 
 peer_down(_SvcName, _Peer, State) ->
-	io:format("irelay_cb::peer_down ~n"),
-	file:write_file("o_reley.log", io_lib:fwrite("~p connection down with client ~n", [node()])),
+	io:format("irelay_cb::peer_down ~p connection down with client ~n", [node()]),
     State.
 
 pick_peer(_, _, _SvcName, _State) ->
@@ -69,8 +67,8 @@ handle_request(#diameter_packet{header = Header, msg = Req, errors = []} = RcvRe
 					 end_to_end_id = EndToEndId}
 		= Header,
 	
-	io:fwrite("i_relay_cb:: handle_request ~p \n", [Req]),
-	io:fwrite("i_relay_cb:: HopByHopId: ~p, EndToEndId: ~p \n", [HopByHopId, EndToEndId]),
+	io:format("i_relay_cb:: handle_request ~p \n", [Req]),
+	io:format("i_relay_cb:: HopByHopId: ~p, EndToEndId: ~p \n", [HopByHopId, EndToEndId]),
 	
 	AnswerHdr = #diameter_header{%%hop_by_hop_id = HopByHopId,
 				end_to_end_id = EndToEndId},
@@ -136,34 +134,34 @@ pass_to_orelay(SvcName, Pkt = #diameter_packet{}, Caps = #diameter_caps{}) ->
 	unregister(ListenerProcess),
 	AnswerPkt;
 pass_to_orelay(_SvcName, _Pkt, _Caps) ->
-	io:fwrite("ERROR: Something goes wrong! pass_to_orelay() didn't parse message ~n").
+	io:format("ERROR: Something goes wrong! pass_to_orelay() didn't parse message ~n").
 
 
 %% lookup_relay_outbound/1
-lookup_orelay(#diameter_packet{msg = Req}, Caps)
+lookup_orelay(#diameter_packet{msg = Req}, _Caps)
     when is_record(Req, diameter_base_RAR) ->
 	
 	DestenationHost  = Req#diameter_base_RAR.'Destination-Host',
 	DestenationRealm = Req#diameter_base_RAR.'Destination-Realm',
 
-	io:fwrite("i_relay_cb::lookup_orelay for Host: ~p, Realm: ~p ~n",[DestenationHost, DestenationRealm]),
+	io:format("i_relay_cb::lookup_orelay for Host: ~p, Realm: ~p ~n",[DestenationHost, DestenationRealm]),
 	Connection = controller_lib:get_connection_by_realm(DestenationHost,DestenationRealm),
-	io:fwrite("i_relay_cb::lookup_orelay Connection ~w ~n", [Connection]),
+	io:format("i_relay_cb::lookup_orelay Connection ~w ~n", [Connection]),
 	if
 		Connection == [] -> {NodeId, ProcessId} = {node(), empty};
 		true -> {NodeId, ProcessId} = lists:nth(1, Connection)
 	end,
 	
-	io:fwrite("                          to  Node: ~w, ProcessId: ~w ~n",[NodeId, ProcessId]),
+	io:format("                          to  Node: ~w, ProcessId: ~w ~n",[NodeId, ProcessId]),
 	#relay{ node_name = NodeId,
 			process_name = ProcessId};
 
-lookup_orelay(Pkt, _Caps) ->
-	io:fwrite("ERROR: Something goes wrong! lookup_relay_outbound() didn't parse message ~n").
+lookup_orelay(_Pkt, _Caps) ->
+	io:format("ERROR: Something goes wrong! lookup_relay_outbound() didn't parse message ~n").
 
 lookup_orelay(#diameter_packet{msg = _Req}, _Caps, stub) ->
 	[{active, NodeName, ProcessName}] = ets:lookup(next_hope, active),
-	io:fwrite("I`ve chosen a orelay: ~w ~w ~n", [NodeName, ProcessName]),
+	io:format("I`ve chosen a orelay: ~w ~w ~n", [NodeName, ProcessName]),
 	
 	#relay{ process_name = ProcessName,
 			node_name 	 = NodeName}.
@@ -185,7 +183,7 @@ wait_for_orelay_answer() ->
 	receive
 		{payload_answer_from_orelay, Pkt}
 		    when is_record(Pkt, diameter_packet)->
-			io:fwrite("I`ve got an answer payload message from orelay.~n"
+			io:format("I`ve got an answer payload message from orelay.~n"
 					  "~p ~n", [Pkt]),
 			Pkt;
 		{payload_answer_from_orelay, Something} ->

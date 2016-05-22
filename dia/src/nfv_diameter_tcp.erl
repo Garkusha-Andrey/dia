@@ -283,7 +283,7 @@ init(accept = T, Ref, Mod, Pid, Opts, Addrs) ->
     ok = accept_peer(Mod, Sock, accept(Matches)),
     publish(Mod, T, Ref, Sock),
     {RAddr, RPort} = ok(peername(Mod, Sock)),
-    io:fwrite("[agarkush] diameter_tcp:: init accept. Opts: ~p~n"
+    io:format("[agarkush] diameter_tcp:: init accept. Opts: ~p~n"
               "Raddr: ~p RPort ~p~n", [Opts, RAddr, RPort]),
 	controller_lib:store_client_port_ipadd(RPort, inet_parse:ntoa(RAddr), node()),
     diameter_peer:up(Pid),

@@ -4,7 +4,7 @@
 		 start_traffic/0]).
 
 start() ->
-	io:fwrite("Start of Erlang client_deploy~n").
+	io:format("Start of Erlang client_deploy~n").
 
 start_traffic() ->
 	continue_call_stub().

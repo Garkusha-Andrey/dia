@@ -74,7 +74,7 @@
 
 start(Name, Opts)
   when is_atom(Name), is_list(Opts) ->
-    io:fwrite("Start diameter service. Name ~s\n", [Name]),
+    io:format("Start diameter service. Name ~s\n", [Name]),
     diameter:start_service(Name, Opts).
 
 %% connect/2
@@ -85,15 +85,15 @@ start(Name, Opts)
 
 connect(Name, Opts)
   when is_list(Opts) ->
-	io:fwrite("node.erl::connect(Name, Opts) ~n"),
+	io:format("node.erl::connect(Name, Opts) ~n"),
     diameter:add_transport(Name, {connect, Opts});
 
 connect(Name, {T, Opts}) ->
-	io:fwrite("node.erl::connect(Name, {T, Opts}) ~n"),
+	io:format("node.erl::connect(Name, {T, Opts}) ~n"),
     connect(Name, Opts ++ client_opts(T));
 
 connect(Name, T) ->
-	io:fwrite("node.erl::connect(Name, T) ~n"),
+	io:format("node.erl::connect(Name, T) ~n"),
     connect(Name, [{connect_timer, 5000} | client_opts(T)]).
 
 %% listen/2

@@ -24,27 +24,24 @@
 %% peer_up/3
 
 peer_up(_SvcName, Peer, State) ->
-	io:format("o_relay_cb::peer_up ~n"),
-	file:write_file("o_reley.log", io_lib:fwrite("~p connected to server ~p: ~n", [node(), Peer])),
+	io:format("orelay_cb::peer_up ~p connected to server ~p: ~n", [node(), Peer]),
     State.
 
 %% peer_down/3
 
 peer_down(_SvcName, _Peer, State) ->
-	io:format("o_relay_cb::peer_down ~n"),
-	file:write_file("o_reley.log", io_lib:fwrite("~p connection down with server ~n", [node()])),
+	io:format("orelay_cb::peer_down ~p connection down with server ~n", [node()]),
     State.
 
 %% pick_peer/4
 
 pick_peer([Peer | _], _, _SvcName, _State) ->
-	io:format("o_relay_cb::peer_peer~n"),
     {ok, Peer}.
 
 %% prepare_request/3
 
 prepare_request(#diameter_packet{msg = ['RAR' = T | Avps]}, _, {_, Caps}) ->
-	io:format("o_relay_cb::prepare_request 1~n"),
+	io:format("orelay_cb::prepare_request 1~n"),
     #diameter_caps{origin_host = {OH, DH},
                    origin_realm = {OR, DR}}
         = Caps,
@@ -57,7 +54,7 @@ prepare_request(#diameter_packet{msg = ['RAR' = T | Avps]}, _, {_, Caps}) ->
              | Avps]};
 
 prepare_request(#diameter_packet{msg = Rec}, _, {_, Caps}) ->
-	io:format("o_relay_cb::prepare_request 2~n"),
+	io:format("orelay_cb::prepare_request 2~n"),
     #diameter_caps{origin_host = {OH, DH},
                    origin_realm = {OR, DR}}
         = Caps,
@@ -75,12 +72,12 @@ prepare_retransmit(Packet, SvcName, Peer) ->
 %% handle_answer/4 
 
 handle_answer(#diameter_packet{header = Header, msg = Msg} = Pkt, _Request, _SvcName, _Peer) ->
-	io:format("o_relay_cb::handle_answer:~n ~p~n", [Msg]),
+	io:format("orelay_cb::handle_answer:~n ~p~n", [Msg]),
 	#diameter_header{hop_by_hop_id = HopByHopId,
 					 end_to_end_id = EndToEndId}
 			= Header,
 	
-	io:format("o_relay_cb:: HopByHopId: ~p, EndToEndId: ~p\n"
+	io:format("orelay_cb:: HopByHopId: ~p, EndToEndId: ~p\n"
 			 , [HopByHopId, EndToEndId]),
 	
     %%{ok, Msg}.
@@ -94,7 +91,7 @@ handle_error(Reason, _Request, _SvcName, _Peer) ->
 %% handle_request/3
 
 handle_request(_Packet, _SvcName, _Peer) ->
-	io:format("o_relay_cb::handle_request~n"),
+	io:format("orelay_cb::handle_request~n"),
     erlang:error({unexpected, ?MODULE, ?LINE}).
 
 

@@ -86,11 +86,9 @@ start(Name, Realm, Opts) ->
 connect(Name, {tcp, _LIp, RIp, Port} = T) ->
     Connection = node:connect(Name, T),
 	case Connection of
-		{ok, _}		-> file:write_file(?LOG_FILE,
-						io_lib:fwrite("~p connected to server ~p:~w ~n", [node(), RIp, Port])),
+		{ok, _}		-> io:format("orelay: connect. ~p connected to server ~p:~w ~n", [node(), RIp, Port]),
 					   orelay_listener(Name, RIp, Port);
-		{error, _} 	-> file:write_file(?LOG_FILE,
-						io_lib:fwrite("~p failed connection to server ~p:~w ~n", [node(), RIp, Port]))
+		{error, _} 	-> io:format("orelay: connect. ~p failed connection to server ~p:~w ~n", [node(), RIp, Port])
 	end
 .
 
@@ -101,21 +99,21 @@ call(Name, rar) ->
     RAR = #diameter_base_RAR{'Session-Id' = SId,
                              'Auth-Application-Id' = 0,
                              'Re-Auth-Request-Type' = 0},
-	io:format("client.erl::call(Name)~n SId: ~s\n", [SId]),
+	io:format("orelay::call(Name)~n SId: ~s\n", [SId]),
     diameter:call(Name, common, RAR, []).
 
 %% Special function for orelay
 call(Name, orelay, Pkt=#diameter_packet{}) ->
-	io:fwrite("orelay::call is ready ~n"),
+	io:format("orelay::call is ready ~n"),
     SId = diameter:session_id(?L(Name)),
 
-	io:format("orelay.erl::call(Name)~n SId: ~s\n", [SId]),
+	io:format("orelay::call(Name)~n SId: ~s\n", [SId]),
     Answer = diameter:call(Name, common, Pkt, []),
 	case Answer of
 		{error, Reason} ->
-			io:fwrite("Error happaned: the reason is: ~p", [Reason]);
+			io:format("orelay: Error happaned: the reason is: ~p", [Reason]);
 		AnswerPkt ->
-			io:fwrite("I've got answer from server~n"),
+			io:format("orelay: I've got answer from server~n"),
 			AnswerPkt
 	end,
 	Answer.
@@ -127,7 +125,7 @@ cast(Name) ->
     RAR = ['RAR', {'Session-Id', SId},
                   {'Auth-Application-Id', 0},
                   {'Re-Auth-Request-Type', 1}],
-	io:format("client.erl::cast(Name)~n SId: ~s\n", [SId]),
+	io:format("orelay::cast(Name)~n SId: ~s\n", [SId]),
     diameter:call(Name, common, RAR, [detach]).
 
 %% stop/1
@@ -143,16 +141,16 @@ orelay_listener(Name, RIp, Port) ->
 	ListenerProcessName = list_to_atom(lists:concat(["listener_or_",Name])),
 	register(ListenerProcessName, spawn(?MODULE, listen_for_request, [Name])),
 	
-	io:fwrite("orelay:: Name ~w, Process ~w ~n", [Name, ListenerProcessName]),
+	io:format("orelay:: Name ~w, Process ~w ~n", [Name, ListenerProcessName]),
 	controller_lib:store_server_procId(Port, inet_parse:ntoa(RIp), ListenerProcessName),
 	ok.
 
 listen_for_request(Name) ->
-	io:fwrite("orelay:: waiting for request ~w ~n", [Name]),
+	io:format("orelay:: waiting for request ~w ~n", [Name]),
 	receive
 		{PayloadRequest, Pkt}
 		    when is_record(Pkt, diameter_packet)->
-			io:fwrite("I've got request payload from irelay.~n"
+			io:format("orelay:: I've got request payload from irelay.~n"
 					  "~p ~n", [Pkt]),
 
 			PreparedPkt		= prepare_pkt(Pkt),
@@ -165,11 +163,11 @@ listen_for_request(Name) ->
 			send_answer_to_irelay(IRelay, AnswerPkt);
 
 		{payload_request_to_irelay, Something} ->
-			io:fwrite("Request payload from irelay incorrect. ~n"
+			io:format("orelay:: Request payload from irelay incorrect. ~n"
 					  "~p ~n", [Something]);
 
 		_ ->
-			io:fwrite("WARNING: recaived strange msg. ~n")
+			io:format("WARNING: recaived strange msg. ~n")
 	end,
 	
 	listen_for_request(Name).
@@ -186,6 +184,6 @@ prepare_pkt(Pkt = #diameter_packet{}) ->
 
 send_answer_to_irelay(IRelay = #relay{},
 					  Pkt 	 = #diameter_packet{}) ->
-	io:fwrite("I`m going to send answer to node: ~w ~n"
+	io:format("orelay:: I`m going to send answer to node: ~w ~n"
 			  "process: ~w ~n", [IRelay#relay.node_name, IRelay#relay.process_name]),
 	{IRelay#relay.process_name, IRelay#relay.node_name} ! {payload_answer_from_orelay, Pkt}.

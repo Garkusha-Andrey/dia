@@ -81,10 +81,10 @@ prepare_request(#diameter_packet{msg = Rec} = _Pkt, _, {_, Caps}) ->
 
 	case {Msg#diameter_base_RAR.'Destination-Host', Msg#diameter_base_RAR.'Destination-Realm'} of
 		{undefined, undefined} ->
-			io:fwrite("Destination is empty~n");
+			io:format("Destination is empty~n");
 		{_OHost, _ORealm} ->
 			ok
-			%%io:fwrite("Destination is not empty.~n Host ~p Realm: ~p~n", [OHost, ORealm])
+			%%io:format("Destination is not empty.~n Host ~p Realm: ~p~n", [OHost, ORealm])
 	end,
 
     {send, Msg}.
