@@ -80,7 +80,6 @@ handle_request(#diameter_packet{header = Header, msg = Req, errors = []} = RcvRe
 	TemplateAnswerPkt = #diameter_packet{ header = AnswerHdr,
 										  msg = RAA},
 
-	
 	%% Will try to resend it to relay_outbound
 	ORelayAnswerPkt = pass_to_orelay(SvcName, RcvRequestPkt, Caps),
 
@@ -148,8 +147,8 @@ lookup_orelay(#diameter_packet{msg = Req}, _Caps)
 	Connection = controller_lib:get_connection_by_realm(DestenationHost,DestenationRealm),
 	io:format("i_relay_cb::lookup_orelay Connection ~w ~n", [Connection]),
 	if
-		Connection == [] -> {NodeId, ProcessId} = {node(), empty};
-		true -> {NodeId, ProcessId} = lists:nth(1, Connection)
+		Connection == [] -> {ProcessId, NodeId} = {node(), empty};
+		true -> {ProcessId, NodeId} = lists:nth(1, Connection)
 	end,
 	
 	io:format("                          to  Node: ~w, ProcessId: ~w ~n",[NodeId, ProcessId]),
@@ -172,6 +171,7 @@ lookup_orelay(#diameter_packet{msg = _Req}, _Caps, stub) ->
 send_reques_to_orelay(ListenerProcess,
 					  #relay{ process_name = ProcessName, node_name = NodeName},
 					  #diameter_packet{} = Pkt) ->
+	io:format("Send request to orelay ~p ~p ~n", [ProcessName, NodeName]),
 	Request = #payload_request{direction = 'to_orelay',
 							   src_node_name = node(),
 							   rcv_process_name = ListenerProcess},

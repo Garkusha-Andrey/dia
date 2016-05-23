@@ -51,7 +51,7 @@ ping() ->
 
 %% Waiting for msgs from controller to add server to this node.
 relay_manager_listener(IPsrc, Index) ->
-	ets:new(?RELAY_MANAGER_SERVER_TABLE, [set, public, named_table, {keypos,4}]),
+	%%ets:new(?RELAY_MANAGER_SERVER_TABLE, [set, public, named_table, {keypos,4}]),
 	receive
 		{add_server, Server}
 			when is_record(Server, servers) ->
@@ -61,19 +61,20 @@ relay_manager_listener(IPsrc, Index) ->
 			{Portdst, IPdst_name} = Server#servers.portIpAddr,
 			{ok, IPdst} = inet_parse:address(IPdst_name),
 
-			spawn(orelay, deploy, [[ServiceName, RealmID, IPsrc, IPdst, Portdst]]),
+			spawn(orelay, deploy, [[ServiceName, RealmID, IPsrc, IPdst, Portdst]]);
 			
 			%% It is not working when starts from bash
-			ets:insert(?RELAY_MANAGER_SERVER_TABLE, {ServiceName, RealmID, IPsrc, {Portdst, IPdst_name}}),
-			io:format("relay_manager: Add server: ~w ~w ~w ~w ~w ~n", [ServiceName, RealmID, IPsrc, IPdst, Portdst]);
+			%%ets:insert(?RELAY_MANAGER_SERVER_TABLE, {ServiceName, RealmID, IPsrc, {Portdst, IPdst_name}}),
+			%%io:format("relay_manager: Add server: ~w ~w ~w ~w ~w ~n", [ServiceName, RealmID, IPsrc, IPdst, Portdst]);
 		{rm_server, Server}
 			when is_record(Server, servers) ->
 
- 			{ServiceName, RealmID, IPsrc, {Portdst, IPdst_name}} = ets:lookup_element(?RELAY_MANAGER_SERVER_TABLE,
-																	Server#servers.portIpAddr, 4),
-			{ok, IPdst} = inet_parse:address(IPdst_name),
-			io:format("relay_manager: Remove server: ~w ~w ~w ~w ~w ~n", [ServiceName, RealmID, IPsrc, IPdst, Portdst]),
-			orelay:stop(ServiceName);
+			io:format("relay_manager: Remove server ~n");
+ 			%%{ServiceName, RealmID, IPsrc, {Portdst, IPdst_name}} = ets:lookup_element(?RELAY_MANAGER_SERVER_TABLE,
+			%%														Server#servers.portIpAddr, 4),
+			%%{ok, IPdst} = inet_parse:address(IPdst_name),
+			%%io:format("relay_manager: Remove server: ~w ~w ~w ~w ~w ~n", [ServiceName, RealmID, IPsrc, IPdst, Portdst]),
+			%%orelay:stop(ServiceName);
 		UnexpectedMsg ->
 			io:format("relay_manager: received an unexpected msg: ~w ~n", [UnexpectedMsg])
 	end,
