@@ -131,6 +131,8 @@ cast(Name) ->
 %% stop/1
 
 stop(Name) ->
+	ListenerProcessName = list_to_atom(lists:concat(["listener_or_",Name])),
+	unregister(ListenerProcessName),
     node:stop(Name).
 
 
