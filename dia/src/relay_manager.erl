@@ -12,7 +12,8 @@
 %% ====================================================================
 -export([start/1]).
 
--export([ping/0]).
+-export([ping_add_srv/0,
+		 ping_rm_srv/0]).
 
 -export([relay_manager_listener/2]).
 
@@ -30,20 +31,25 @@ start(T) ->
 		{ok, IP}  		-> IP;
 		{error, Reason} -> io:format("Bad Addr: ~w. Reason ~w ~n", [lists:nth(1, T), Reason])
 	end,
-	
-	%% It is not working when starts from bash
-	%%ets:new(?RELAY_MANAGER_SERVER_TABLE, [set, public, named_table]),
-	
+
+	ets:new(?RELAY_MANAGER_SERVER_TABLE, [set, public, named_table]),
+
 	Index = 0,
-	register(?MODULE, spawn(?MODULE, relay_manager_listener, [SwitchIP, Index])),
+	register(?MODULE, self()),
+	relay_manager_listener(SwitchIP, Index),
 	ok.
 
 
 %% Just for tests without controller
-ping() ->
-	Srv = #servers{portIpAddr = {{127,0,0,1}, 1234},
-				   realmId = 111, realmHost='ex.sc'},
+ping_add_srv() ->
+	Srv = #servers{portIpAddr = {1234, "127.0.0.1"},
+				   realmId = "s1.ex.com", realmHost="ex.com"},
 	{relay_manager, node()} ! {add_server, Srv}.
+
+ping_rm_srv() ->
+	Srv = #servers{portIpAddr = {1234, "127.0.0.1"},
+				   realmId = "s1.ex.com", realmHost="ex.com"},
+	{relay_manager, node()} ! {rm_server, Srv}.
 
 %% ====================================================================
 %% Internal functions
@@ -51,7 +57,6 @@ ping() ->
 
 %% Waiting for msgs from controller to add server to this node.
 relay_manager_listener(IPsrc, Index) ->
-	%%ets:new(?RELAY_MANAGER_SERVER_TABLE, [set, public, named_table, {keypos,4}]),
 	receive
 		{add_server, Server}
 			when is_record(Server, servers) ->
@@ -61,20 +66,18 @@ relay_manager_listener(IPsrc, Index) ->
 			{Portdst, IPdst_name} = Server#servers.portIpAddr,
 			{ok, IPdst} = inet_parse:address(IPdst_name),
 
-			spawn(orelay, deploy, [[ServiceName, RealmID, IPsrc, IPdst, Portdst]]);
-			
-			%% It is not working when starts from bash
-			%%ets:insert(?RELAY_MANAGER_SERVER_TABLE, {ServiceName, RealmID, IPsrc, {Portdst, IPdst_name}}),
-			%%io:format("relay_manager: Add server: ~w ~w ~w ~w ~w ~n", [ServiceName, RealmID, IPsrc, IPdst, Portdst]);
+			spawn(orelay, deploy, [[ServiceName, RealmID, IPsrc, IPdst, Portdst]]),
+
+			ets:insert(?RELAY_MANAGER_SERVER_TABLE, {Server#servers.portIpAddr, ServiceName}),
+			io:format("relay_manager: Add server: ~p ~p ~p ~p ~p ~n", [ServiceName, RealmID, IPsrc, IPdst, Portdst]);
 		{rm_server, Server}
 			when is_record(Server, servers) ->
-
-			io:format("relay_manager: Remove server ~n");
- 			%%{ServiceName, RealmID, IPsrc, {Portdst, IPdst_name}} = ets:lookup_element(?RELAY_MANAGER_SERVER_TABLE,
-			%%														Server#servers.portIpAddr, 4),
-			%%{ok, IPdst} = inet_parse:address(IPdst_name),
-			%%io:format("relay_manager: Remove server: ~w ~w ~w ~w ~w ~n", [ServiceName, RealmID, IPsrc, IPdst, Portdst]),
-			%%orelay:stop(ServiceName);
+			
+			IPAddr = Server#servers.portIpAddr,
+ 			[{_, ServiceName}] = ets:lookup(?RELAY_MANAGER_SERVER_TABLE, IPAddr),
+			
+			orely:stop(ServiceName),
+			io:format("relay_manager: Remove server: Ip/Port: ~p Name: ~p~n", [IPAddr, ServiceName]);
 		UnexpectedMsg ->
 			io:format("relay_manager: received an unexpected msg: ~w ~n", [UnexpectedMsg])
 	end,
