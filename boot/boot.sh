@@ -183,10 +183,10 @@ else
 				INBOUND_RELAY_PORT=3911
 				setsid erl -detached -name $DEnode \
 				 -s boot start $RNODE \
-				 -s controller_app change_configuration \
+				 -s controller_app change_configuration diameter $DEnode $LOCALIP $DIAMETER_MAC
 				 -s irelay deploy $InboundRalayName $REALM $PublicIp $INBOUND_RELAY_PORT \
 				 -s relay_manager start $PublicIp \
-				  diameter $DEnode $LOCALIP $DIAMETER_MAC -setcookie 'ABCD' >/dev/null 2>&1 < /dev/null
+				 -setcookie 'ABCD' >/dev/null 2>&1 < /dev/null
 			else
 				echo "You need specify the one Controller node to start Diameter instance!\n"
 				usage
