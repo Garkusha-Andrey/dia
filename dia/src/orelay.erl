@@ -132,7 +132,8 @@ cast(Name) ->
 
 stop(Name) ->
 	ListenerProcessName = list_to_atom(lists:concat(["listener_or_",Name])),
-	unregister(ListenerProcessName),
+	io:format("Orelay: Stop server. Name ~p, ListenerProcessName ~p ~n", [Name, ListenerProcessName]),
+	%%unregister(ListenerProcessName),
     node:stop(Name).
 
 

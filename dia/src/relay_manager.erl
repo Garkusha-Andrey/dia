@@ -63,21 +63,41 @@ relay_manager_listener(IPsrc, Index) ->
 
 			RealmID = ?REALM_ID,
 			ServiceName = list_to_atom(lists:concat(["server_",Index])),
-			{Portdst, IPdst_name} = Server#servers.portIpAddr,
+			IPAddr = Server#servers.portIpAddr,
+			{Portdst, IPdst_name} = IPAddr,
 			{ok, IPdst} = inet_parse:address(IPdst_name),
+			
+			Result = ets:lookup(?RELAY_MANAGER_SERVER_TABLE, IPAddr),
+			case Result of
+				[] ->
+					spawn(orelay, deploy, [[ServiceName, RealmID, IPsrc, IPdst, Portdst]]),
+					ets:insert(?RELAY_MANAGER_SERVER_TABLE, {IPAddr, ServiceName}),
+					io:format("relay_manager: Add server: ~p ~p ~p ~p ~p ~n", [ServiceName, RealmID, IPsrc, IPdst, Portdst]);
+				Something ->
+					io:format("relay_manager: Add server: Has something ~p ~n", [Something])
+			end,
 
-			spawn(orelay, deploy, [[ServiceName, RealmID, IPsrc, IPdst, Portdst]]),
-
-			ets:insert(?RELAY_MANAGER_SERVER_TABLE, {Server#servers.portIpAddr, ServiceName}),
-			io:format("relay_manager: Add server: ~p ~p ~p ~p ~p ~n", [ServiceName, RealmID, IPsrc, IPdst, Portdst]);
+			io:format("relay_manager: Add server: End of edding ~n");
 		{rm_server, Server}
 			when is_record(Server, servers) ->
+			io:format("relay_manager: Remove server: Just get server to remove ~p~n", [Server]),
 			
 			IPAddr = Server#servers.portIpAddr,
- 			[{_, ServiceName}] = ets:lookup(?RELAY_MANAGER_SERVER_TABLE, IPAddr),
-			
-			orely:stop(ServiceName),
-			io:format("relay_manager: Remove server: Ip/Port: ~p Name: ~p~n", [IPAddr, ServiceName]);
+			io:format("relay_manager: Remove server: IPAddr  ~p ~n", [IPAddr]),
+ 			Result = ets:lookup(?RELAY_MANAGER_SERVER_TABLE, IPAddr),
+			io:format("relay_manager: Remove server: Result  ~p ~n", [Result]),
+			case Result of
+				[{_,ServiceName}] ->
+					io:format("relay_manager: Remove server: ServiceName  ~p ~n", [ServiceName]),
+					ets:delete(?RELAY_MANAGER_SERVER_TABLE, IPAddr),
+					ets:delete(?RELAY_MANAGER_SERVER_TABLE, IPAddr),
+					orelay:stop(ServiceName);
+				[] ->
+					do_nothing;
+				Another ->
+					io:format("relay_manager: Remove server: Strange result ~p ~n", [Another])
+			end,
+			io:format("relay_manager: Remove server: End~n");
 		UnexpectedMsg ->
 			io:format("relay_manager: received an unexpected msg: ~w ~n", [UnexpectedMsg])
 	end,

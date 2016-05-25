@@ -465,12 +465,13 @@ get_not_distributed_servers() ->
 
 %%Terminate TCP connection if distribution changed:
 check_distribution(BServers, AServers) ->
-        lists:foreach(fun(#servers{portIpAddr = {Port, Ip}} = BServer ) ->
-                                                  AServer = lists:keyfind({Port, Ip}, 2, AServers),
+        lists:foreach(fun(#servers{nodeId = NodeId} = BServer ) ->
+                                                  AServer = lists:keyfind(NodeId, 5, AServers),
                                                   case AServer == BServer of
                                                           true ->
                                                                   do_nothing;
                                                           false ->
+															  error_logger:error_report("controller_server:: check_distribution:: ~p | ~p", [BServers, AServers]),
                                                                   Node = BServer#servers.nodeId,
                                                                   Pid = BServer#servers.processId,
                                                                   case Pid of
