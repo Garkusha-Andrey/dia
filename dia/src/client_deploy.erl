@@ -15,7 +15,7 @@ start(LocalIP, RemoteIp) ->
 	add_clients('c', LocalIP, RemoteIp, 5).
 
 add_clients(Pattern, LocalIP, RemoteIp, Count) ->
-	io:format("Count: ~p~n", [Count]),
+	io:format("Adding ~p clients: ~n", [Count]),
 	add_clients_pattern(Pattern, 'ex.com', LocalIP, RemoteIp, ?SERVER_PORT, 0, Count).
 
 start_traffic(Count) ->
@@ -38,8 +38,7 @@ continues_call(Name, Realm, Host, IntervalMS) ->
 
 %% 'c1','ex.ru','127.0.0.1','127.0.0.1','3911'
 add_clients_pattern(NamePattern, Realm, LocalIP, RemoteIP, Port, To, To) ->
-	ServiceName = list_to_atom(lists:concat([NamePattern, "_", To])),
-	client:deploy([ServiceName, Realm, LocalIP, RemoteIP, Port]);
+	ok;
 
 add_clients_pattern(NamePattern, Realm, LocalIP, RemoteIP, Port, From, To) ->
 	ServiceName = list_to_atom(lists:concat([NamePattern, "_", From])),

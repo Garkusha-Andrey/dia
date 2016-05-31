@@ -90,7 +90,6 @@ relay_manager_listener(IPsrc, Index) ->
 				[{_,ServiceName}] ->
 					io:format("relay_manager: Remove server: ServiceName  ~p ~n", [ServiceName]),
 					ets:delete(?RELAY_MANAGER_SERVER_TABLE, IPAddr),
-					ets:delete(?RELAY_MANAGER_SERVER_TABLE, IPAddr),
 					orelay:stop(ServiceName);
 				[] ->
 					do_nothing;
