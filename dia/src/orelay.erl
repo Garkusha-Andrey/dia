@@ -56,8 +56,8 @@ init() ->
 %% deploy/1 ([<Name>, <Ralm>, <local IP>, <remote IP>, <Port>])
 %% deploy([c1, 'ex.ru', {127,0,0,1}, {127,0,0,1}, 3911]).
 deploy(T) ->
-	{ok, Log} = file:open("orelay.log", [append]),
-	erlang:group_leader(Log, self()),
+	%%{ok, Log} = file:open("orelay.log", [append]),
+	%%erlang:group_leader(Log, self()),
 
 	Name = lists:nth(1, T),
 	Realm = lists:nth(2, T),
@@ -68,7 +68,8 @@ deploy(T) ->
     diameter:start(),
 	
 	start(Name, Realm),
-    connect(Name, {tcp, LIp, RIp, Port})
+    connect(Name, {tcp, LIp, RIp, Port}),
+	ok
 	.
 
 %% start/2
@@ -104,7 +105,6 @@ call(Name, rar) ->
 
 %% Special function for orelay
 call(Name, orelay, Pkt=#diameter_packet{}) ->
-	io:format("orelay::call is ready ~n"),
     SId = diameter:session_id(?L(Name)),
 
 	io:format("orelay::call(Name)~n SId: ~s\n", [SId]),
@@ -132,7 +132,7 @@ cast(Name) ->
 
 stop(Name) ->
 	ListenerProcessName = list_to_atom(lists:concat(["listener_or_",Name])),
-	io:format("Orelay: Stop server. Name ~p, ListenerProcessName ~p ~n", [Name, ListenerProcessName]),
+	io:format("orelay: Stop server. Name ~p, ListenerProcessName ~p ~n", [Name, ListenerProcessName]),
 	%%unregister(ListenerProcessName),
     node:stop(Name).
 
@@ -145,16 +145,14 @@ orelay_listener(Name, RIp, Port) ->
 	register(ListenerProcessName, spawn(?MODULE, listen_for_request, [Name])),
 	
 	io:format("orelay:: Name ~w, Process ~w ~n", [Name, ListenerProcessName]),
-	controller_lib:store_server_procId(Port, inet_parse:ntoa(RIp), ListenerProcessName),
-	ok.
+	controller_lib:store_server_procId(Port, inet_parse:ntoa(RIp), ListenerProcessName).
 
 listen_for_request(Name) ->
 	io:format("orelay:: waiting for request ~w ~n", [Name]),
 	receive
 		{PayloadRequest, Pkt}
 		    when is_record(Pkt, diameter_packet)->
-			io:format("orelay:: I've got request payload from irelay.~n"
-					  "~p ~n", [Pkt]),
+			%%io:format("orelay:: I've got request payload from irelay.~n"),
 
 			PreparedPkt		= prepare_pkt(Pkt),
 			{ok, AnswerPkt}	= call(Name, orelay, PreparedPkt),
@@ -166,8 +164,9 @@ listen_for_request(Name) ->
 			send_answer_to_irelay(IRelay, AnswerPkt);
 
 		{payload_request_to_irelay, Something} ->
-			io:format("orelay:: Request payload from irelay incorrect. ~n"
-					  "~p ~n", [Something]);
+			error;
+			%%io:format("orelay:: Request payload from irelay incorrect. ~n"
+			%%		  "~p ~n", [Something]);
 
 		_ ->
 			io:format("WARNING: recaived strange msg. ~n")

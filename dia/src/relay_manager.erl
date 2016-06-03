@@ -70,7 +70,9 @@ relay_manager_listener(IPsrc, Index) ->
 			Result = ets:lookup(?RELAY_MANAGER_SERVER_TABLE, IPAddr),
 			case Result of
 				[] ->
+					io:format("relay_manager: Add server Message ~n"),
 					spawn(orelay, deploy, [[ServiceName, RealmID, IPsrc, IPdst, Portdst]]),
+					io:format("relay_manager: Add server orelay: deploy paased ~n"),
 					ets:insert(?RELAY_MANAGER_SERVER_TABLE, {IPAddr, ServiceName}),
 					io:format("relay_manager: Add server: ~p ~p ~p ~p ~p ~n", [ServiceName, RealmID, IPsrc, IPdst, Portdst]);
 				Something ->

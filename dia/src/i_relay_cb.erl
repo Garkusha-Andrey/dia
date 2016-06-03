@@ -25,6 +25,7 @@
 -define(UNEXPECTED, erlang:error({unexpected, ?MODULE, ?LINE})).
 
 -define(LISTENER_PROCESS, irelay_l).
+-define(AWAIT_ORELAY_RIMEOUT, 5000).
 
 %% ====================================================================
 %% Callback implementation
@@ -123,15 +124,31 @@ rc(_) ->
 %% ====================================================================
 
 pass_to_orelay(SvcName, Pkt = #diameter_packet{}, Caps = #diameter_caps{}) ->
-	ListenerProcess = list_to_atom(lists:concat(["listener_ir_", SvcName])),
-	register(ListenerProcess, self()),
+	{H, M, S} = time(),
+	{Mega, Sec, Micro} = os:timestamp(),
+	ListenerProcess = list_to_atom(lists:concat(["listener_ir_", SvcName, "_", M, S, "_", Micro])),
 	
 	ORelay = lookup_orelay(Pkt, Caps),
-	send_reques_to_orelay(ListenerProcess, ORelay, Pkt),
+	io:format("irelay.cb:: pass_to_orelay. orelay: ~p ~n", [ORelay]),
 	
-	AnswerPkt = wait_for_orelay_answer(),
-	unregister(ListenerProcess),
-	AnswerPkt;
+	if 
+		ORelay#relay.process_name /= undefined ->
+			register(ListenerProcess, self()),
+			send_reques_to_orelay(ListenerProcess, ORelay, Pkt),
+	
+			AnswerPkt = wait_for_orelay_answer(),
+			unregister(ListenerProcess);
+		
+		true ->
+			AnswerPkt = [],
+			io:format("irelay.cb:: orelay is incorrect {~p ~p} ~n",
+					  [ORelay#relay.node_name, ORelay#relay.process_name])
+	end,
+
+	if
+		is_record(AnswerPkt, diameter_packet) -> AnswerPkt;
+		true -> []
+	end;
 pass_to_orelay(_SvcName, _Pkt, _Caps) ->
 	io:format("ERROR: Something goes wrong! pass_to_orelay() didn't parse message ~n").
 
@@ -191,7 +208,12 @@ wait_for_orelay_answer() ->
 					  "~p ~n", [Something]),
 			error;
 		_ ->
-			io:format("I can't recognize the message: ~n")
+			io:format("I can't recognize the message: ~n"),
+			error
+	
+	after ?AWAIT_ORELAY_RIMEOUT ->
+			io:format("No response from orelay for ~p ms. ~n", [?AWAIT_ORELAY_RIMEOUT]),
+			error
 	end.
 
 
