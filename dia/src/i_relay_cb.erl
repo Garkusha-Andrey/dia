@@ -84,8 +84,12 @@ handle_request(#diameter_packet{header = Header, msg = Req, errors = []} = RcvRe
 	%% Will try to resend it to relay_outbound
 	ORelayAnswerPkt = pass_to_orelay(SvcName, RcvRequestPkt, Caps),
 
-	%%compile Answer Packet
-	AnswerPkt = compile_answer_packet(ORelayAnswerPkt, TemplateAnswerPkt),
+	if 
+		is_record(ORelayAnswerPkt, diameter_packet) ->
+			AnswerPkt = compile_answer_packet(ORelayAnswerPkt, TemplateAnswerPkt);
+		true ->
+			AnswerPkt = []
+	end,
 
     {reply, AnswerPkt};
 
