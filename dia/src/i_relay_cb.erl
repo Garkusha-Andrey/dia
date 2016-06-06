@@ -32,11 +32,11 @@
 %% ====================================================================
 
 peer_up(_SvcName, Peer, State) ->
-	io:format("irelay_cb::peer_up ~p connected to client ~p: ~n", [node(), Peer]),
+	error_logger:info_msg("irelay_cb::peer_up ~p connected to client ~p: ~n", [node(), Peer]),
     State.
 
 peer_down(_SvcName, _Peer, State) ->
-	io:format("irelay_cb::peer_down ~p connection down with client ~n", [node()]),
+	error_logger:info_msg("irelay_cb::peer_down ~p connection down with client ~n", [node()]),
     State.
 
 pick_peer(_, _, _SvcName, _State) ->
@@ -57,7 +57,7 @@ handle_error(_Reason, _Request, _SvcName, _Peer) ->
 %% A request whose decode was successful ...
 handle_request(#diameter_packet{header = Header, msg = Req, errors = []} = RcvRequestPkt, SvcName, {_, Caps})
   when is_record(Req, diameter_base_RAR) ->
-	io:format("i_relay_cb::handle_request RAR diameter message\n"),
+	error_logger:info_msg("i_relay_cb::handle_request RAR diameter message~n"),
     #diameter_caps{origin_host = {OH,_},
                    origin_realm = {OR,_}}
         = Caps,
@@ -68,8 +68,8 @@ handle_request(#diameter_packet{header = Header, msg = Req, errors = []} = RcvRe
 					 end_to_end_id = EndToEndId}
 		= Header,
 	
-	io:format("i_relay_cb:: handle_request ~p \n", [Req]),
-	io:format("i_relay_cb:: HopByHopId: ~p, EndToEndId: ~p \n", [HopByHopId, EndToEndId]),
+	error_logger:info_msg("i_relay_cb:: handle_request ~p ~n", [Req]),
+	error_logger:info_msg("i_relay_cb:: HopByHopId: ~p, EndToEndId: ~p ~n", [HopByHopId, EndToEndId]),
 	
 	AnswerHdr = #diameter_header{%%hop_by_hop_id = HopByHopId,
 				end_to_end_id = EndToEndId},
@@ -94,7 +94,7 @@ handle_request(#diameter_packet{header = Header, msg = Req, errors = []} = RcvRe
 %% diameter will set Result-Code and Failed-AVP's.
 handle_request(#diameter_packet{msg = Req}, _SvcName, {_, Caps})
   when is_record(Req, diameter_base_RAR) ->
-	io:format("i_relay_cb::handle_request got RAR msg 2"),
+	error_logger:info_msg("i_relay_cb::handle_request got RAR msg 2~n"),
     #diameter_caps{origin_host = {OH,_},
                    origin_realm = {OR,_}}
         = Caps,
@@ -107,7 +107,7 @@ handle_request(#diameter_packet{msg = Req}, _SvcName, {_, Caps})
 
 %% Answer that any other message is unsupported.
 handle_request(#diameter_packet{}, _SvcName, _) ->
-	io:format("i_relay_cb::handle_request got npn RAR msg"),
+	error_logger:info_msg("i_relay_cb::handle_request got npn RAR msg~n"),
     {answer_message, 3001}.  %% DIAMETER_COMMAND_UNSUPPORTED
 
 %% Map Re-Auth-Request-Type to Result-Code just for the purpose of
@@ -129,7 +129,7 @@ pass_to_orelay(SvcName, Pkt = #diameter_packet{}, Caps = #diameter_caps{}) ->
 	ListenerProcess = list_to_atom(lists:concat(["listener_ir_", SvcName, "_", M, S, "_", Micro])),
 	
 	ORelay = lookup_orelay(Pkt, Caps),
-	io:format("irelay.cb:: pass_to_orelay. orelay: ~p ~n", [ORelay]),
+	error_logger:info_msg("irelay.cb:: pass_to_orelay. orelay: ~p ~n", [ORelay]),
 	
 	if 
 		ORelay#relay.process_name /= undefined ->
@@ -141,7 +141,7 @@ pass_to_orelay(SvcName, Pkt = #diameter_packet{}, Caps = #diameter_caps{}) ->
 		
 		true ->
 			AnswerPkt = [],
-			io:format("irelay.cb:: orelay is incorrect {~p ~p} ~n",
+			error_logger:info_msg("irelay.cb:: orelay is incorrect {~p ~p} ~n",
 					  [ORelay#relay.node_name, ORelay#relay.process_name])
 	end,
 
@@ -150,7 +150,7 @@ pass_to_orelay(SvcName, Pkt = #diameter_packet{}, Caps = #diameter_caps{}) ->
 		true -> []
 	end;
 pass_to_orelay(_SvcName, _Pkt, _Caps) ->
-	io:format("ERROR: Something goes wrong! pass_to_orelay() didn't parse message ~n").
+	error_logger:error_msg("Something goes wrong! pass_to_orelay() didn't parse message ~n").
 
 
 %% lookup_relay_outbound/1
@@ -160,24 +160,24 @@ lookup_orelay(#diameter_packet{msg = Req}, _Caps)
 	DestenationHost  = Req#diameter_base_RAR.'Destination-Host',
 	DestenationRealm = Req#diameter_base_RAR.'Destination-Realm',
 
-	io:format("i_relay_cb::lookup_orelay for Host: ~p, Realm: ~p ~n",[DestenationHost, DestenationRealm]),
+	error_logger:info_msg("i_relay_cb::lookup_orelay for Host: ~p, Realm: ~p ~n",[DestenationHost, DestenationRealm]),
 	Connection = controller_lib:get_connection_by_realm(DestenationHost,DestenationRealm),
-	io:format("i_relay_cb::lookup_orelay Connection ~w ~n", [Connection]),
+	error_logger:info_msg("i_relay_cb::lookup_orelay Connection ~w ~n", [Connection]),
 	if
 		Connection == [] -> {ProcessId, NodeId} = {node(), empty};
 		true -> {ProcessId, NodeId} = lists:nth(1, Connection)
 	end,
 	
-	io:format("                          to  Node: ~w, ProcessId: ~w ~n",[NodeId, ProcessId]),
+	error_logger:info_msg("                          to  Node: ~w, ProcessId: ~w ~n",[NodeId, ProcessId]),
 	#relay{ node_name = NodeId,
 			process_name = ProcessId};
 
 lookup_orelay(_Pkt, _Caps) ->
-	io:format("ERROR: Something goes wrong! lookup_relay_outbound() didn't parse message ~n").
+	error_logger:error_msg("Something goes wrong! lookup_relay_outbound() didn't parse message ~n").
 
 lookup_orelay(#diameter_packet{msg = _Req}, _Caps, stub) ->
 	[{active, NodeName, ProcessName}] = ets:lookup(next_hope, active),
-	io:format("I`ve chosen a orelay: ~w ~w ~n", [NodeName, ProcessName]),
+	error_logger:info_msg("I`ve chosen a orelay: ~w ~w ~n", [NodeName, ProcessName]),
 	
 	#relay{ process_name = ProcessName,
 			node_name 	 = NodeName}.
@@ -188,7 +188,7 @@ lookup_orelay(#diameter_packet{msg = _Req}, _Caps, stub) ->
 send_reques_to_orelay(ListenerProcess,
 					  #relay{ process_name = ProcessName, node_name = NodeName},
 					  #diameter_packet{} = Pkt) ->
-	io:format("Send request to orelay ~p ~p ~n", [ProcessName, NodeName]),
+	error_logger:info_msg("Send request to orelay ~p ~p ~n", [ProcessName, NodeName]),
 	Request = #payload_request{direction = 'to_orelay',
 							   src_node_name = node(),
 							   rcv_process_name = ListenerProcess},
@@ -200,15 +200,15 @@ wait_for_orelay_answer() ->
 	receive
 		{payload_answer_from_orelay, Pkt}
 		    when is_record(Pkt, diameter_packet)->
-			io:format("I`ve got an answer payload message from orelay.~n"
+			error_logger:info_msg("I`ve got an answer payload message from orelay.~n"
 					  "~p ~n", [Pkt]),
 			Pkt;
 		{payload_answer_from_orelay, Something} ->
-			io:format("Answer payload from orelay is undefined ~n"
+			error_logger:info_msg("Answer payload from orelay is undefined ~n"
 					  "~p ~n", [Something]),
 			error;
 		_ ->
-			io:format("I can't recognize the message: ~n"),
+			error_logger:info_msg("I can't recognize the message: ~n"),
 			error
 	
 	after ?AWAIT_ORELAY_RIMEOUT ->

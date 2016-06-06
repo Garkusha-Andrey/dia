@@ -56,8 +56,8 @@ init() ->
 %% deploy/1 ([<Name>, <Ralm>, <local IP>, <remote IP>, <Port>])
 %% deploy([c1, 'ex.ru', {127,0,0,1}, {127,0,0,1}, 3911]).
 deploy(T) ->
-	%%{ok, Log} = file:open("orelay.log", [append]),
-	%%erlang:group_leader(Log, self()),
+	{ok, Log} = file:open("orelay.log", [append]),
+	erlang:group_leader(Log, self()),
 
 	Name = lists:nth(1, T),
 	Realm = lists:nth(2, T),
@@ -68,8 +68,7 @@ deploy(T) ->
     diameter:start(),
 	
 	start(Name, Realm),
-    connect(Name, {tcp, LIp, RIp, Port}),
-	ok
+    connect(Name, {tcp, LIp, RIp, Port})
 	.
 
 %% start/2
@@ -87,9 +86,9 @@ start(Name, Realm, Opts) ->
 connect(Name, {tcp, _LIp, RIp, Port} = T) ->
     Connection = node:connect(Name, T),
 	case Connection of
-		{ok, _}		-> io:format("orelay: connect. ~p connected to server ~p:~w ~n", [node(), RIp, Port]),
+		{ok, _}		-> error_logger:info_msg("orelay: connect. ~p connected to server ~p:~w ~n", [node(), RIp, Port]),
 					   orelay_listener(Name, RIp, Port);
-		{error, _} 	-> io:format("orelay: connect. ~p failed connection to server ~p:~w ~n", [node(), RIp, Port])
+		{error, _} 	-> error_logger:info_msg("orelay: connect. ~p failed connection to server ~p:~w ~n", [node(), RIp, Port])
 	end
 .
 
@@ -100,20 +99,21 @@ call(Name, rar) ->
     RAR = #diameter_base_RAR{'Session-Id' = SId,
                              'Auth-Application-Id' = 0,
                              'Re-Auth-Request-Type' = 0},
-	io:format("orelay::call(Name)~n SId: ~s\n", [SId]),
+	error_logger:info_msg("orelay::call(Name)~n SId: ~s~n", [SId]),
     diameter:call(Name, common, RAR, []).
 
 %% Special function for orelay
 call(Name, orelay, Pkt=#diameter_packet{}) ->
+	error_logger:info_msg("orelay::call is ready ~n"),
     SId = diameter:session_id(?L(Name)),
 
-	io:format("orelay::call(Name)~n SId: ~s\n", [SId]),
+	error_logger:info_msg("orelay::call(Name)~n SId: ~s~n", [SId]),
     Answer = diameter:call(Name, common, Pkt, []),
 	case Answer of
 		{error, Reason} ->
-			io:format("orelay: Error happaned: the reason is: ~p", [Reason]);
+			error_logger:info_msg("orelay: Error happaned: the reason is: ~p", [Reason]);
 		AnswerPkt ->
-			io:format("orelay: I've got answer from server~n"),
+			error_logger:info_msg("orelay: I've got answer from server~n"),
 			AnswerPkt
 	end,
 	Answer.
@@ -125,14 +125,14 @@ cast(Name) ->
     RAR = ['RAR', {'Session-Id', SId},
                   {'Auth-Application-Id', 0},
                   {'Re-Auth-Request-Type', 1}],
-	io:format("orelay::cast(Name)~n SId: ~s\n", [SId]),
+	error_logger:info_msg("orelay::cast(Name)~n SId: ~s~n", [SId]),
     diameter:call(Name, common, RAR, [detach]).
 
 %% stop/1
 
 stop(Name) ->
 	ListenerProcessName = list_to_atom(lists:concat(["listener_or_",Name])),
-	io:format("orelay: Stop server. Name ~p, ListenerProcessName ~p ~n", [Name, ListenerProcessName]),
+	error_logger:info_msg("Orelay: Stop server. Name ~p, ListenerProcessName ~p ~n", [Name, ListenerProcessName]),
 	%%unregister(ListenerProcessName),
     node:stop(Name).
 
@@ -144,15 +144,17 @@ orelay_listener(Name, RIp, Port) ->
 	ListenerProcessName = list_to_atom(lists:concat(["listener_or_",Name])),
 	register(ListenerProcessName, spawn(?MODULE, listen_for_request, [Name])),
 	
-	io:format("orelay:: Name ~w, Process ~w ~n", [Name, ListenerProcessName]),
-	controller_lib:store_server_procId(Port, inet_parse:ntoa(RIp), ListenerProcessName).
+	error_logger:info_msg("orelay:: Name ~w, Process ~w ~n", [Name, ListenerProcessName]),
+	controller_lib:store_server_procId(Port, inet_parse:ntoa(RIp), ListenerProcessName),
+	ok.
 
 listen_for_request(Name) ->
-	io:format("orelay:: waiting for request ~w ~n", [Name]),
+	error_logger:info_msg("orelay:: waiting for request ~w ~n", [Name]),
 	receive
 		{PayloadRequest, Pkt}
 		    when is_record(Pkt, diameter_packet)->
-			%%io:format("orelay:: I've got request payload from irelay.~n"),
+			error_logger:info_msg("orelay:: I've got request payload from irelay.~n"
+					  "~p ~n", [Pkt]),
 
 			PreparedPkt		= prepare_pkt(Pkt),
 			{ok, AnswerPkt}	= call(Name, orelay, PreparedPkt),
@@ -164,12 +166,11 @@ listen_for_request(Name) ->
 			send_answer_to_irelay(IRelay, AnswerPkt);
 
 		{payload_request_to_irelay, Something} ->
-			error;
-			%%io:format("orelay:: Request payload from irelay incorrect. ~n"
-			%%		  "~p ~n", [Something]);
+			error_logger:info_msg("orelay:: Request payload from irelay incorrect. ~n"
+					  "~p ~n", [Something]);
 
 		_ ->
-			io:format("WARNING: recaived strange msg. ~n")
+			error_logger:info_msg("WARNING: recaived strange msg. ~n")
 	end,
 	
 	listen_for_request(Name).
@@ -186,6 +187,6 @@ prepare_pkt(Pkt = #diameter_packet{}) ->
 
 send_answer_to_irelay(IRelay = #relay{},
 					  Pkt 	 = #diameter_packet{}) ->
-	io:format("orelay:: I`m going to send answer to node: ~w ~n"
+	error_logger:info_msg("orelay:: I`m going to send answer to node: ~w ~n"
 			  "process: ~w ~n", [IRelay#relay.node_name, IRelay#relay.process_name]),
 	{IRelay#relay.process_name, IRelay#relay.node_name} ! {payload_answer_from_orelay, Pkt}.

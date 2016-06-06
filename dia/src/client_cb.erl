@@ -39,7 +39,7 @@ peer_up(_SvcName, {_, Caps}, State) ->
 	#diameter_caps{origin_host = {OH, DH},
                    host_ip_address = {IPsrc, IPdst}}
         = Caps, 
-	io:format("client: connection Up. ~p -> ~p ~n"
+	error_logger:info_msg("client: connection Up. ~p -> ~p ~n"
 			  "                       ~p -> ~p ~n",
 			  [OH, DH, IPsrc, IPdst]),
     State.
@@ -47,7 +47,7 @@ peer_up(_SvcName, {_, Caps}, State) ->
 %% peer_down/3
 
 peer_down(_SvcName, _Peer, State) ->
-	io:format("client: connection Down.~n~n"),
+	error_logger:info_msg("client: connection Down.~n~n"),
     State.
 
 %% pick_peer/4
@@ -58,7 +58,7 @@ pick_peer([Peer | _], _, _SvcName, _State) ->
 %% prepare_request/3
 
 prepare_request(#diameter_packet{msg = ['RAR' = T | Avps]}, _, {_, Caps}) ->
-	io:format("client.cb::prepare_request 1~n"),
+	error_logger:info_msg("client.cb::prepare_request 1~n"),
     #diameter_caps{origin_host = {OH, DH},
                    origin_realm = {OR, DR}}
         = Caps,
@@ -81,10 +81,10 @@ prepare_request(#diameter_packet{msg = Rec} = _Pkt, _, {_, Caps}) ->
 
 	case {Msg#diameter_base_RAR.'Destination-Host', Msg#diameter_base_RAR.'Destination-Realm'} of
 		{undefined, undefined} ->
-			io:format("Destination is empty~n");
+			error_logger:info_msg("Destination is empty~n");
 		{_OHost, _ORealm} ->
 			ok
-			%%io:format("Destination is not empty.~n Host ~p Realm: ~p~n", [OHost, ORealm])
+			%%error_logger:info_msg("Destination is not empty.~n Host ~p Realm: ~p~n", [OHost, ORealm])
 	end,
 
     {send, Msg}.
@@ -103,7 +103,7 @@ handle_answer(#diameter_packet{header = Header, msg = Msg}, _Request, _SvcName, 
 					 end_to_end_id = _EndToEndId}
 			= Header,
 
-	io:format("client: Answer recieved [1] ~n"
+	error_logger:info_msg("client: Answer recieved [1] ~n"
 			 "             SessionId:   ~p ~n"
 			 "             HopByHopId:  ~p ~n",
 			 [Id, HopByHopId]),
@@ -118,5 +118,5 @@ handle_error(Reason, _Request, _SvcName, _Peer) ->
 %% handle_request/3
 
 handle_request(_Packet, _SvcName, _Peer) ->
-	io:format("client.cb::handle_request. ERROR~n"),
+	error_logger:info_msg("client.cb::handle_request. ERROR~n"),
     erlang:error({unexpected, ?MODULE, ?LINE}).

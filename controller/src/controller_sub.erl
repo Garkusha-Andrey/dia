@@ -49,9 +49,9 @@ start_link() ->
           undefined ->
                supervisor:start_link({global,?MODULE}, ?MODULE, []);
           Pid ->
-             io:format("Supervisor is already started! Pid is ~p~n",[Pid]),
+             error_logger:info_msg("Supervisor is already started! Pid is ~p~n",[Pid]),
              global:unregister_name(controller_sub),
-             io:format("Registred procs are ~p~n",[global:registered_names()]),
+             error_logger:info_msg("Registred supervision sprocs are ~p~n",[global:registered_names()]),
              timer:sleep(5000),
              supervisor:start_link({global,?MODULE}, ?MODULE, [])
     end.

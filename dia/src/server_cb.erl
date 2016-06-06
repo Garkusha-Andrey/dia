@@ -43,13 +43,13 @@ peer_up(_SvcName, {_, Caps}, State) ->
 	#diameter_caps{origin_host = {OH, DH},
                    host_ip_address = {IPsrc, IPdst}}
         = Caps, 
-	io:format("server: connection Up. ~p -> ~p ~n"
+	error_logger:info_msg("server: connection Up. ~p -> ~p ~n"
 			  "                       ~p -> ~p ~n",
 			  [OH, DH, IPsrc, IPdst]),
     State.
 
 peer_down(_SvcName, _Peer, State) ->
-	io:format("server: connection Down.~n~n"),
+	error_logger:info_msg("server: connection Down.~n~n"),
     State.
 
 pick_peer(_, _, _SvcName, _State) ->
@@ -81,11 +81,11 @@ handle_request(#diameter_packet{header = Header, msg = Req, errors = []} = _Pkt,
 					 end_to_end_id = EndToEndId}
 		= Header,
 	
-	io:format("server: Request recieved [1] ~n"
+	error_logger:info_msg("server: Request recieved [1] ~n"
 			 "             SessionId:   ~p ~n"
 			 "             HopByHopId:  ~p ~n",
 			 [Id, HopByHopId]),
-	%%io:format("server_cb::handle_request ~p ~n", [Req]),
+	%%error_logger:info_msg("server_cb::handle_request ~p ~n", [Req]),
 	
 	HeaderAnswer = #diameter_header{%%hop_by_hop_id = HopByHopId,
 									end_to_end_id = EndToEndId},
@@ -109,7 +109,7 @@ handle_request(#diameter_packet{msg = Req}, _SvcName, {_, Caps})
     #diameter_base_RAR{'Session-Id' = Id}
         = Req,
 	
-	io:format("server: Request recieved [2]."
+	error_logger:info_msg("server: Request recieved [2]."
 			 "             SessionId:   ~p ~n",
 			 [Id]),
 
@@ -119,7 +119,7 @@ handle_request(#diameter_packet{msg = Req}, _SvcName, {_, Caps})
 
 %% Answer that any other message is unsupported.
 handle_request(#diameter_packet{}, _SvcName, _) ->
-	io:format("server_cb::handle_request 3"),
+	error_logger:info_msg("server_cb::handle_request 3~n"),
     {answer_message, 3001}.  %% DIAMETER_COMMAND_UNSUPPORTED
 
 %% Map Re-Auth-Request-Type to Result-Code just for the purpose of

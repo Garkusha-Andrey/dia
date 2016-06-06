@@ -13,7 +13,12 @@
          get_remotePeerIp/1,
          get_dianode/1,
          get_weight/1,
-		 initialize_routing/1,
+	 initialize_routing/1,
+	 get_diaconfig/0,
+	 get_instance_by_node/1,
+	 get_all_servers/0,
+	 check_mnnesia_entries/1,
+	 list_clents_table/0,
 
 %% Routing interface
          get_ovsIp/0,
@@ -42,24 +47,24 @@
 
 %% API for diameter
 -export([%% servers Table
-		 store_procId/2,
-		 store_server_procId/3,
-		 get_connection_by_realm/2,
-		 
-		 %% clients Table
-		 store_client_port_ipadd/3,
+	 store_procId/2,
+	 store_server_procId/3,
+	 get_connection_by_realm/2,
+ 
+	 %% clients Table
+	 store_client_port_ipadd/3,
          delete_client_port_ipaddr/2]).
 
 -include("controller_app.hrl").
 
 get_all_diameters() ->
     F = fun() ->
-                mnesia:all_keys(diaLocalConfig)
-        end,
+	mnesia:all_keys(diaLocalConfig)
+    end,
     Result = mnesia:transaction(F),
     case Result of
         {aborted, Reason} ->
-            io:format("ERROR: Immpossible to get diaLocalConfig due to ~p~n",[Reason]);
+            error_logger:error_msg("Immpossible to get DIA configuration due to ~p~n",[Reason]);
         {atomic, ResultOfFun} ->
             ResultOfFun
     end.
@@ -75,14 +80,14 @@ list_connections() ->
     %%          nodeId = dia1}].
 
 get_instance_mac(NodeId) ->
-%%    lists:flatten(lists:duplicate(5,"0" ++ integer_to_list(InstanceId) ++ ":"))
-%%      ++ "0" ++ integer_to_list(InstanceId).
+    %%    lists:flatten(lists:duplicate(5,"0" ++ integer_to_list(InstanceId) ++ ":"))
+    %%      ++ "0" ++ integer_to_list(InstanceId).
     get_diaLocalMac(NodeId).
 
 
 get_diaconfig() ->
     F = fun() ->
-                AllDistanceID = mnesia:all_keys(diaConnections),
+		AllDistanceID = mnesia:all_keys(diaConnections),
                 lists:foldl(fun(Elem, Acc) ->
                                     Record = mnesia:read(diaConnections, Elem),
                                     [Record | Acc]
@@ -93,14 +98,14 @@ get_diaconfig() ->
     Result = mnesia:transaction(F),
     case Result of
         {aborted, Reason} ->
-            error_logger:error_report("ERROR: Immpossible to get diaConnections due to ~p",[Reason]);
+            error_logger:error_msg("Immpossible to get DIAs due to ~p~n",[Reason]);
         {atomic, ResultOfFun} ->
-            lists:append(ResultOfFun)
+            ResultOfFun
     end.
 
 get_diaconfig(InstanceID) ->
     F = fun() ->
-                AllDistanceID = mnesia:all_keys(diaConnections),
+		AllDistanceID = mnesia:all_keys(diaConnections),
                 lists:foldl(fun(Elem, Acc) when Elem == InstanceID ->
                                     Record = mnesia:read(diaConnections, Elem),
                                     [Record | Acc];
@@ -113,9 +118,9 @@ get_diaconfig(InstanceID) ->
     Result = mnesia:transaction(F),
     case Result of
         {aborted, Reason} ->
-            error_logger:error_report("ERROR: Immpossible to get diaConnections due to ~p",[Reason]);
+            error_logger:error_msg("Immpossible to get DIAs by InstId due to ~p~n",[Reason]);
         {atomic, ResultOfFun} ->
-            lists:append(ResultOfFun)
+            ResultOfFun
     end.
 
 get_weight(InstanceID) ->
@@ -133,7 +138,8 @@ get_weight(InstanceID) ->
     Result = mnesia:transaction(F),
     case Result of
         {aborted, Reason} ->
-            error_logger:error_report("ERROR: Immpossible to get instanceWeight due to ~p",[Reason]);
+            error_logger:error_msg("Immpossible to get instanceWeight "
+                                   "by InstId ~p due to ~p~n",[InstanceID,Reason]);
         {atomic, ResultOfFun} ->
             [InstWeigth] = lists:append(ResultOfFun),
             InstWeigth#instanceWeight.weight
@@ -166,7 +172,8 @@ get_localIpandMac(InstanceID) ->
     Result = mnesia:transaction(F),
     case Result of
         {aborted, Reason} ->
-            error_logger:report("ERROR: Immpossible to get diaLocalConfig due to ~p",[Reason]);
+            error_logger:error_msg("get_localIpandMac: Immpossible to get "
+				  "DIA Local Ip and Mac IP due to ~p~n",[Reason]);
         {atomic, ResultOfFun} ->
             [DiaLocalIPR] = lists:append(ResultOfFun),
             {DiaLocalIPR#diaLocalConfig.ipAddress, DiaLocalIPR#diaLocalConfig.macAddress}
@@ -174,7 +181,7 @@ get_localIpandMac(InstanceID) ->
 
 get_diaLocalIpConfig() ->
     F = fun() ->
-                AllDistanceID = mnesia:all_keys(diaLocalConfig),
+		AllDistanceID = mnesia:all_keys(diaLocalConfig),
                 lists:map(fun(Elem) ->
                                   mnesia:read(diaLocalConfig, Elem)
                           end,
@@ -183,7 +190,8 @@ get_diaLocalIpConfig() ->
     Result = mnesia:transaction(F),
     case Result of
         {aborted, Reason} ->
-            error_logger:error_report("ERROR: Immpossible to get diaLocalConfig due to ~p",[Reason]);
+            error_logger:error_msg("get_diaLocalUpConfig: Immpossible to "
+				  "get DIA configuration due to ~p",[Reason]);
         {atomic, ResultOfFun} ->
             lists:append(ResultOfFun)
     end.
@@ -193,7 +201,7 @@ get_diaLocalIp(NodeId) ->
     Records = get_diaLocalIpConfig(),
     lists:filtermap(fun(RElem) ->
                             if RElem#diaLocalConfig.nodeId == NodeId ->
-                                    {true, RElem#diaLocalConfig.ipAddress};
+                                   {true, RElem#diaLocalConfig.ipAddress};
                                true ->
                                     false
                             end
@@ -205,7 +213,7 @@ get_diaLocalMac(NodeId) ->
     Records = get_diaLocalIpConfig(),
     lists:flatten(lists:filtermap(fun(RElem) ->
                             if RElem#diaLocalConfig.nodeId == NodeId ->
-                                    {true, RElem#diaLocalConfig.macAddress};
+                                  {true, RElem#diaLocalConfig.macAddress};
                                true ->
                                     false
                             end
@@ -220,7 +228,7 @@ get_GlobalData() ->
     Result = mnesia:transaction(F),
     case Result of
         {aborted, Reason} ->
-            error_logger:error_report("ERROR: Immpossible to get globalData due to ~p",[Reason]);
+            error_logger:error_msg("get_GlobalData: Immpossible to get globalData due to ~p~n",[Reason]);
         {atomic, GlobalDataRec} ->
             GlobalDataRec
     end.
@@ -252,21 +260,20 @@ list_instance_weights_stub() ->
     list_instance_weights_stub(2).
 
 list_instance_weights_stub(Iteration) ->
-
     case Iteration of
-        1 ->
-%% empty instance list with no previous instances
+	1 ->
+            %% empty instance list with no previous instances
             [];
         2 ->
-%% 3 even instances with 8/3 = 2,66 chunks each
+            %% 3 even instances with 8/3 = 2,66 chunks each
             [#instanceWeight{nodeId=1, weight=95},
              #instanceWeight{nodeId=2, weight=100},
              #instanceWeight{nodeId=3, weight=100}];
         3 ->
-%% empty instance list with previous instances
+	    %% empty instance list with previous instances
             [];
         4 ->
-%% 6 even instances with 8/6 = 1,33 chunks each
+	    %% 6 even instances with 8/6 = 1,33 chunks each
             [#instanceWeight{nodeId=1, weight=100},
              #instanceWeight{nodeId=2, weight=95},
              #instanceWeight{nodeId=3, weight=100},
@@ -286,6 +293,7 @@ delete(Node) ->
     delete_from_servers(Node).
 
 delete_from_servers(Node) ->
+	error_logger:info_msg("Removing of all servers for the node ~p is started!~n",[Node]),
     F = fun() -> 
                 Keys = mnesia:all_keys(servers),
                 lists:foreach(fun(Key) ->
@@ -301,33 +309,47 @@ delete_from_servers(Node) ->
         Result = mnesia:transaction(F),
     case Result of
         {aborted, Reason} ->
-            error_logger:error_report("ERROR: Immpossible to delete server due to ~p",[Reason]);
+            error_logger:error_msg("delete_from_servers: Immpossible to delete server due to ~p",[Reason]);
         {atomic, ResultOfFun} ->
+	    error_logger:info_msg("Removing of all servers for the "
+	                          "node ~p is finished! Result is ~p~n",[Node,ResultOfFun]),
             ResultOfFun
     end.
 
 delete_diaconnections(Node) ->
+    error_logger:info_msg("Cleanup of the table diaConnections "
+			      "for the node ~p is started!~n",[Node]),
     F = fun() -> 
-                AllInstances = mnesia:all_keys(diaConnections),
-                lists:map(fun(#diaConnections{nodeId = NodeId} = Elem) when NodeId == Node ->
-                                  [Record] = mnesia:read(diaConnections, Elem),
-                                  mnesia:delete_object(Record)
-                          end,
-                          AllInstances)         
-        end,
+            AllInstances = mnesia:all_keys(diaConnections),
+            error_logger:info_msg("AllInstances are ~p~n",[AllInstances]),
+            lists:map(fun(NodeId)  ->
+	        	  if NodeId == Node ->
+		                 [Record] = mnesia:read(diaConnections, NodeId),
+			          mnesia:delete_object(Record);
+		          true ->
+				 do_nothing
+			  end
+                      end,
+                      AllInstances)         
+    end,
     Result = mnesia:transaction(F),
     case Result of
         {aborted, Reason} ->
-            error_logger:error_report("ERROR: Immpossible to get diaConnections due to ~p",[Reason]);
+            error_logger:error_msg("delete_diaconnections(: Immpossible "
+				  "to clean up the table diaConnections due to ~p",[Reason]);
         {atomic, ResultOfFun} ->
-            lists:append(ResultOfFun)
+            error_logger:info_msg("Cleanup of the table diaConnections "
+	                          "for the node ~p is finished!~n",[Node]),
+            ResultOfFun
     end.
 
 delete_diaLocalConfig(Node) ->
+    error_logger:info_msg("Cleanup of the table diaLocalConfig "
+                          "for the node ~p is started!~n",[Node]),
     check_transaction(mnesia:transaction(fun() ->
 			mnesia:delete({diaLocalConfig, Node})
 					 end),
-		      "Impossible to delete from diaLocalConfig").
+		      "delete_diaLocalConfig: Impossible to delete from diaLocalConfig!").
 
 get_instance_by_node(Node) ->
     F = fun() ->
@@ -347,8 +369,8 @@ get_instance_by_node(Node) ->
     Result = mnesia:transaction(F),
     case Result of
         {aborted, Reason} ->
-            error_logger:error_report("Impossible to get the dia instances from "
-                                      "diaConfig table due to reason: ~p",[Reason]);
+            error_logger:error_msg("Impossible to get the dia instances from "
+                                   "diaConnections table due to reason: ~p",[Reason]);
         {atomic, ResultOfFun} ->
             ResultOfFun
     end.
@@ -371,21 +393,24 @@ get_session_pid(Node) ->
     Result = mnesia:transaction(F),
     case Result of
         {aborted, Reason} ->
-            error_logger:error_report("Impossible to get the servers config from "
-                                      "servers table due to reason: ~p",[Reason]);
+            error_logger:error_msg("get_session_pid: Impossible to get the servers config from "
+                                  "servers table to get the session PID due to reason: ~p",[Reason]);
         {atomic, ResultOfFun} ->
             ResultOfFun
     end.
 
 delete_session_data(Node) ->
-    SessionPids = get_session_pid(Node),
-    lists:foreach(fun(Pid) ->
-                          {Pid, Node} ! terminate
+    %%TBD
+    Servers = get_servers_per_node(Node),
+    error_logger:info_msg("Send signal rm_server to DIA ~p to delete Servers ~p !~n",[Node, Servers]),
+    lists:foreach(fun(Server) ->
+			  {?RELAY_MGR, Node} ! {rm_server, Server}
                   end,
-                  SessionPids),
+                  Servers),
     delete_session(Node).
 
 delete_session(Node) ->
+    error_logger:info_msg("Cleanup the servers table for the DIA node ~p !~n",[Node]),
     F = fun() ->
                 ServersKeys = mnesia:all_keys(servers),
                 lists:foreach(fun(Elem, Acc) ->
@@ -403,13 +428,14 @@ delete_session(Node) ->
     Result = mnesia:transaction(F),
     case Result of
         {aborted, Reason} ->
-            error_logger:error_report("Impossible to get the servers config from "
-                                                                          "servers table due to reason: ~p",[Reason]);
+            error_logger:error_msg("delete_session: Impossible to get the servers config from "
+				  "servers table during cleanup of servers due to reason: ~p",[Reason]);
         {atomic, ResultOfFun} ->
             ResultOfFun
     end.
 
 delete_server_info(Node) ->
+    error_logger:info_msg("Removing server data from servers table is started for the node ~p~n",[Node]),
     F = fun() ->
                 ServersKeys = mnesia:all_keys(servers),
                 lists:foreach(fun(Elem) ->
@@ -428,26 +454,36 @@ delete_server_info(Node) ->
     Result = mnesia:transaction(F),
     case Result of
         {aborted, Reason} ->
-            error_logger:error_report("Impossible to get the servers config from "
-                                      "servers table due to reason: ~p",[Reason]);
+            error_logger:error_msg("delete_server_info: Impossible to get the servers config from "
+                                   "servers table to remove server info due to reason: ~p~n",[Reason]);
         {atomic, ResultOfFun} ->
             ResultOfFun
     end.
 
 
 get_servers_config() ->
-    mnesia:lock({table, server}, read).
-
+    F = fun() ->
+		mnesia:lock({table, servers}, read)
+    end,
+    Result = mnesia:transaction(F),
+    case Result of
+        {aborted, Reason} ->
+            error_logger:error_msg("get_servers_config: Immpossible to "
+				  "get servers due to ~p~n",[Reason]);
+        {atomic, Servers} ->
+            Servers
+    end.
+%%Gets servers that are distributed per DIA nodes:
 list_servers() ->
     F = fun() ->
-                PortIp = mnesia:all_keys(servers),
-                RecordList  = lists:foldl(fun(Elem, Acc) ->
-                                                  Acc ++ mnesia:read(servers, Elem)
+               PortIp = mnesia:all_keys(servers),
+               RecordList  = lists:foldl(fun(Elem, Acc) ->
+							  Acc ++ mnesia:read(servers, Elem)
                                           end,
                                           [],
                                           PortIp),
-                DistRecordList =lists:filter(fun(#servers{nodeId = NodeId}) ->
-                                                     NodeId /= undefined
+               DistRecordList =lists:filter(fun(#servers{nodeId = NodeId}) ->
+                                                    NodeId /= undefined
                                              end,
                                              RecordList),
                 lists:sort(fun(#servers{realmId = RealmIdA}, #servers{realmId = RealmIdB}) ->
@@ -459,7 +495,30 @@ list_servers() ->
     Result = mnesia:transaction(F),
     case Result of
         {aborted, Reason} ->
-            error_logger:error_report("ERROR: Immpossible to get servers due to ~p~n",[Reason]);
+            error_logger:error_msg("list_servers: Immpossible to "
+				  "get distributed servers due to ~p~n",[Reason]);
+        {atomic, Servers} ->
+            Servers
+    end.
+
+get_all_servers() ->
+    F = fun() ->
+                PortIp = mnesia:all_keys(servers),
+                RecordList  = lists:foldl(fun(Elem, Acc) ->
+							  Acc ++ mnesia:read(servers, Elem)
+                                          end,
+                                          [],
+                                          PortIp),
+                lists:sort(fun(#servers{realmId = RealmIdA}, #servers{realmId = RealmIdB}) ->
+                                   RealmIdA =< RealmIdB
+                           end,
+                           RecordList)                                                
+        end,
+    Result = mnesia:transaction(F),
+    case Result of
+        {aborted, Reason} ->
+            error_logger:error_msg("list_servers: Immpossible to "
+				  "get distributed servers due to ~p~n",[Reason]);
         {atomic, Servers} ->
             Servers
     end.
@@ -482,7 +541,7 @@ get_servers_per_node(NodeId) ->
     Result = mnesia:transaction(F),
     case Result of
         {aborted, Reason} ->
-            error_logger:error_report("ERROR: Immpossible to get servers due to ~p~n",[Reason]);
+            error_logger:error_msg("get_servers_per_node: Immpossible to get servers due to ~p~n",[Reason]);
         {atomic, Servers} ->
             Servers
     end.
@@ -494,7 +553,8 @@ get_server(Port, IpAddress) ->
     Result = mnesia:transaction(F),
     case Result of
         {aborted, Reason} ->
-            error_logger:error_report("ERROR: Immpossible to get servers due to ~p~n",[Reason]);
+            error_logger:error_msg("get_server: Immpossible to get "
+				  "servers per pair Port and IpAddress due to ~p~n",[Reason]);
         {atomic, Server} ->
             Server
     end.
@@ -508,8 +568,8 @@ store_procId(Server, ProcessId) ->
     Result = mnesia:transaction(F),
     case Result of
         {aborted, Reason} ->
-            error_logger:error_report("ERROR: Immpossible to"
-                                      " get servers due to ~p~n",[Reason]);
+            error_logger:error_msg("store_procId: Immpossible to"
+                                   " store server connections process Id due to ~p~n",[Reason]);
         {atomic, Res} ->
             Res
     end.
@@ -519,14 +579,14 @@ store_server_procId(Port, IpAddress, ProcessId) ->
     store_procId(Server, ProcessId).
 
 get_connection_by_realm(RealmHost, RealmId) ->
-	io:fwrite("get_connection_by_realm RealmHost ~w and RealmId ~w ~n",
-									  [RealmHost, RealmId]),
-	    F = fun() ->
+    error_logger:info_msg("get_connection_by_realm: RealmHost ~p and RealmId ~p ~n",
+			  [RealmHost, RealmId]),
+    F = fun() ->
                 ServersKeys = mnesia:all_keys(servers),
                 lists:foldl(fun(Elem, Acc) ->
                                     [Record] = mnesia:read(servers, Elem),
                                     if
-                                        {Record#servers.realmHost, Record#servers.realmId} == {RealmId, RealmHost} ->
+        				{Record#servers.realmHost, Record#servers.realmId} == {RealmId, RealmHost} ->
                                             [{Record#servers.processId,Record#servers.nodeId}|Acc];
                                         true -> Acc
                                     end
@@ -537,9 +597,9 @@ get_connection_by_realm(RealmHost, RealmId) ->
     Result = mnesia:transaction(F),
     case Result of
         {aborted, Reason} ->
-            error_logger:error_report("Impossible to get the servers connections to "
-                                      "servers with RealmHost ~p and RealmId ~p due to ~p~n",
-									  [RealmHost, RealmId, Reason]);
+            error_logger:error_msg("get_connection_by_realm: Impossible to get the servers connections to "
+                                   "servers with RealmHost ~p and RealmId ~p due to ~p~n",
+				  [RealmHost, RealmId, Reason]);
         {atomic, ResultOfFun} ->
             ResultOfFun
     end.
@@ -564,14 +624,14 @@ list_clients() ->
 				  lists:last(mnesia:read(clients, Key))
 			  end, mnesia:all_keys(clients))
         end,
-    check_transaction(mnesia:transaction(F), "Failed to get clients").
+    check_transaction(mnesia:transaction(F), "list_clients: Failed to get clients").
 
 
 check_transaction(Result, ErrMsg) ->
     case Result of
         {aborted, Reason} ->
-            error_logger:error_report("ERROR: ~s. Reason: ~p~n",
-				      [ErrMsg, Reason]);
+            error_logger:error_msg(" ~s. Reason: ~p~n",
+	                          [ErrMsg, Reason]);
         {atomic, Data} ->
             Data
     end.
@@ -585,13 +645,49 @@ check_transaction(Result, ErrMsg) ->
 %% Error will be detected if routing has not initialized in 5 minutes.
 %% ====================================================================
 initialize_routing(0) ->
-	error_logger:error_report("ERROR: Routing has not been initialized in 10 retries!!!");
+    error_logger:error_msg("initialize_routing: Routing has not been initialized in 10 retries~n!!!");
 initialize_routing(Tries) ->
-	case routing:init() of
-		tryagain ->
-			timer:sleep(15000),
-			initialize_routing(Tries - 1);
-		_ ->
-			%%Initialized:
+    case routing:init() of
+	tryagain ->
+	    timer:sleep(15000),
+            initialize_routing(Tries - 1);
+       _ ->
+	    %%Initialized:
             ok
-	end.
+    end.
+
+%%Checks if mnesia table is empty:
+check_mnnesia_entries(Table) ->
+    F = fun() ->
+                case mnesia:first(Table) of
+                    '$end_of_table' ->
+			error_logger:info_msg("Mnesia table ~p is empty!",[Table]),
+			'$end_of_table';
+		    Key ->
+			error_logger:info_msg("Mnesia table ~p is NOT empty! "
+		                              "The first element is ~p~n",[Table]),
+			Key
+		end
+   end,
+   check_transaction(mnesia:transaction(F), "check_mnesia_entries: Failed to get information").
+
+
+%%Shows all clients table:
+list_clents_table() ->
+    F = fun() ->
+		PortIp = mnesia:all_keys(clients),
+		lists:foldl(fun(Elem, Acc) ->
+					Acc ++ mnesia:read(clients, Elem)
+                            end,
+			    [],
+			    PortIp)
+    end,
+    Result = mnesia:transaction(F),
+    case Result of
+        {aborted, Reason} ->
+            error_logger:error_msg("list_servers: Immpossible to "
+				  "get distributed servers due to ~p~n",[Reason]);
+        {atomic, Servers} ->
+            Servers
+    end.
+	

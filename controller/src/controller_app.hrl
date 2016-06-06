@@ -12,19 +12,21 @@
 			 macAddress = undefined}).
 
 %% @doc Record for the pre-defined parameters
--record(globalData, {ovsIpMask     = {undefined, undefined}, %% {"Backplane IP", "Backplane IP Mask"}
-		     publicIpMask  = {undefined,undefined},  %% {"Diameter Service IP, Diameter Service Mask"}
-		     ovsMac   = undefined,
-		     extGwMac = undefined}).
+-record(globalData, {ovsIpMask = {undefined, undefined}, %% {"Backplane IP", "Backplane IP Mask"}
+	             publicIpMask  = {undefined,undefined},  %% {"Diameter Service IP, Diameter Service Mask"}
+	             ovsMac   = undefined,
+	             extGwMac = undefined}).
 
 -record(instanceWeight, {nodeId=undefined,
                          weight=undefined}).
 
 -record(servers, {portIpAddr = {undefined,undefined}, %% Port, IpAddr
-		  realmId = undefined,
+	          realmId = undefined,
 		  realmHost = undefined,
 		  nodeId = undefined,
 		  processId = undefined}).
 -record(clients, {portIpAddr = {undefined, undefined},
 		  nodeId = undefined}).
 -record(diameterNodes, {node =  undefined}).
+
+-define(RELAY_MGR,relay_manager).

@@ -5,10 +5,10 @@
 -define(DO_DEBUG, false).
 
 log(Str, Args) ->
-    io:format(Str, Args).
+    error_logger:info_msg(Str, Args).
 
 debug(Str, Args) ->
-    if ?DO_DEBUG ->
+    if ?DO_DEBUG  ->
         log(Str, Args);
        true ->
 	ok

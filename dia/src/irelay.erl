@@ -32,7 +32,11 @@
 -define(LISTENER_PROCESS, irelay_l).
 
 init(NodeName) ->
-	ets:new(next_hope, [set, named_table]),
+	case ets:info(next_hope) of
+		undefined ->
+			ets:new(next_hope, [set, named_table, public]);
+		_ -> do_nothing
+	end,
 	ets:insert(next_hope, {active, NodeName, ?LISTENER_PROCESS}).
 
 %% deploy/1 ([<Name>, <Ralm>, <IP>, <Port>])
@@ -75,4 +79,3 @@ stop(Name) ->
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
-

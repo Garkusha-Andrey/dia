@@ -13,7 +13,7 @@
 -include_lib("diameter/include/diameter_gen_base_rfc6733.hrl").
 
 -export([deploy/1,
-		 start/2,     %% start a service
+	 start/2,     %% start a service
          start/3,     %%
          connect/2,   %% add a connecting transport
          call/2,      %% send using the record encoding
@@ -29,27 +29,27 @@
 %% supporting multiple Diameter applications may or may not want to
 %% configure a common callback module on all applications.
 -define(SERVICE(HostName, Realm),
-						[{'Origin-Host', ?L(HostName) ++ "." ++ ?L(Realm)},
-                        {'Origin-Realm', ?L(Realm)},
-                        {'Vendor-Id', 0},
-                        {'Product-Name', "Client"},
-                        {'Auth-Application-Id', [0]},
-                        {application, [{alias, common},
-                                       {dictionary, diameter_gen_base_rfc6733},
-                                       {module, ?CALLBACK_MOD}]}]).
+	[{'Origin-Host', ?L(HostName) ++ "." ++ ?L(Realm)},
+         {'Origin-Realm', ?L(Realm)},
+         {'Vendor-Id', 0},
+         {'Product-Name', "Client"},
+         {'Auth-Application-Id', [0]},
+         {application, [{alias, common},
+         {dictionary, diameter_gen_base_rfc6733},
+         {module, ?CALLBACK_MOD}]}]).
 
 %% deploy([<Name>, <Ralm>, <local IP>, <remote IP>, <Port>])
 %% client:deploy(['c1','ex.ru','127.0.0.1','127.0.0.1','3911']). - from Erlang mashine
 %% erl -s client deploy 'c1' 'ex.com' "127.0.0.1" "127.0.0.1" 3911 - from bash
 deploy(T) ->
-	Name = lists:nth(1, T),
-	Realm = lists:nth(2, T),	
-	{ok, LIp} = inet_parse:address(atom_to_list(lists:nth(3, T))),
-	{ok, RIp} = inet_parse:address(atom_to_list(lists:nth(4, T))),
-	Port  = list_to_integer(atom_to_list(lists:nth(5, T))),
+    Name = lists:nth(1, T),
+    Realm = lists:nth(2, T),	
+    {ok, LIp} = inet_parse:address(atom_to_list(lists:nth(3, T))),
+    {ok, RIp} = inet_parse:address(atom_to_list(lists:nth(4, T))),
+    Port  = list_to_integer(atom_to_list(lists:nth(5, T))),
 
     diameter:start(),
-	start(Name, Realm),
+    start(Name, Realm),
     connect(Name, {tcp, LIp, RIp, Port}).
 
 %% start/2
@@ -61,7 +61,7 @@ start(Name, Realm)
 %% start/3
 start(Name, Realm, Opts) ->
     node:start(Name, Opts ++ [T || {K,_} = T <- ?SERVICE(Name, Realm),
-                                   false == lists:keymember(K, 1, Opts)]).
+    false == lists:keymember(K, 1, Opts)]).
 
 %% connect/2
 %% example: connect(client1, 3901)
@@ -80,8 +80,8 @@ call(Name, rar) ->
                              'Auth-Application-Id' = 0,
                              'Re-Auth-Request-Type' = 0},
 	
-	io:format("client.erl::call(~w)~n"
-              "Msg: ~p ~n", [Name, RAR]),
+    error_logger:info_msg("client.erl::call(~w)~n"
+                          "Msg: ~p ~n", [Name, RAR]),
     diameter:call(Name, common, RAR, []).
 
 %% call/4
@@ -95,12 +95,12 @@ call(Name, user, Realm, Host) ->
 
                              %% define final destenation [rfc 6733 ch. 6.1]
                              'Destination-Realm' = Realm,
-		                     'Destination-Host'  = Host},
+	                     'Destination-Host'  = Host},
 
-	RAR_packet = #diameter_packet{msg = RAR},
+    RAR_packet = #diameter_packet{msg = RAR},
 
     diameter:call(Name, common, RAR_packet, []),
-	ok.
+    ok.
 
 
 %% cast/1
@@ -109,7 +109,7 @@ cast(Name) ->
     RAR = ['RAR', {'Session-Id', SId},
                   {'Auth-Application-Id', 0},
                   {'Re-Auth-Request-Type', 1}],
-	io:format("client.erl::cast(Name)~n SId: ~s\n", [SId]),
+    error_logger:info_msg("client.erl::cast(Name)~n SId: ~s~n", [SId]),
     diameter:call(Name, common, RAR, [detach]).
 
 %% stop/1

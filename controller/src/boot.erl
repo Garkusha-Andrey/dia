@@ -16,16 +16,17 @@
 %% Internal functions
 %% ====================================================================
 start() ->
-io:format("I am in boot:start()~n"),
+error_logger:info_msg("I am in boot:start()~n"),
 	case application:get_application(controller_app) of
 		undefined ->
 			io:format("Controller App is NOT started!~n"),
 		        application:start(inets),
 			application:start(controller_app);
 		{ok, _Value} ->
-			io:format("Controller App is started!~n")
+			error_logger:info_msg("Controller App is started!~n")
     end.
 start([REnode]) ->
+	error_logger:error_report("The node ~p  connects to node ~p!~n",[node(), REnode]),
 	case net_adm:ping(REnode) of
 		pong ->
 			ok;

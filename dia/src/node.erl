@@ -74,7 +74,7 @@
 
 start(Name, Opts)
   when is_atom(Name), is_list(Opts) ->
-    io:format("Start diameter service. Name ~s\n", [Name]),
+    error_logger:info_msg("Start diameter service. Name ~s~n", [Name]),
     diameter:start_service(Name, Opts).
 
 %% connect/2
@@ -85,15 +85,15 @@ start(Name, Opts)
 
 connect(Name, Opts)
   when is_list(Opts) ->
-	io:format("node.erl::connect(Name, Opts) ~n"),
+	error_logger:info_msg("node.erl::connect(Name, Opts) ~n"),
     diameter:add_transport(Name, {connect, Opts});
 
 connect(Name, {T, Opts}) ->
-	io:format("node.erl::connect(Name, {T, Opts}) ~n"),
+	error_logger:info_msg("node.erl::connect(Name, {T, Opts}) ~n"),
     connect(Name, Opts ++ client_opts(T));
 
 connect(Name, T) ->
-	io:format("node.erl::connect(Name, T) ~n"),
+	error_logger:info_msg("node.erl::connect(Name, T) ~n"),
     connect(Name, [{connect_timer, 5000} | client_opts(T)]).
 
 %% listen/2
@@ -130,7 +130,7 @@ stop(Name) ->
 %% Return transport options for a listening transport.
 
 server_opts({T, Addr, Port}) ->
-	io:format("node.erl:: server_opts: mod: ~w addr: ~w port: ~w ~n", [T, Addr, Port]),
+	error_logger:info_msg("node.erl:: server_opts: mod: ~w addr: ~w port: ~w ~n", [T, Addr, Port]),
     [{watchdog_timer, 6000},
 	 {transport_module, tmod(T)},
      {transport_config, [{reuseaddr, true},
@@ -151,7 +151,7 @@ client_opts({T, LA, RA, RP})
     [S, {C,Os,2000} | T];
 
 client_opts({T, LA, RA, RP}) ->
-	io:format("node.erl:: client_opts: mod: ~w, ip: ~w, addr: ~w, port: ~w ~n", [T, LA, RA, RP]),
+	error_logger:info_msg("node.erl:: client_opts: mod: ~w, ip: ~w, addr: ~w, port: ~w ~n", [T, LA, RA, RP]),
     [{watchdog_timer, 6000},
 	 {transport_module, tmod(T)},
      {transport_config, [{raddr, addr(RA)},

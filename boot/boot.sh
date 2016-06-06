@@ -124,7 +124,7 @@ if [ $APPLICATION = "" ]; then
 		if [ "$CPRIO" != "" ]
 		then
 			Enode=controller`echo $CPRIO`@`echo $LOCALIP`
-			setsid erl -detached -name $Enode -s boot start -s controller_app change_configuration \
+			setsid erl -detached -name $Enode -kernel error_logger \{file,\"./`echo $Enode`.log\"\} -s boot start -s controller_app change_configuration \
 			    $OVSIntIp $OVSIntMask $PublicIp $PublicMask $OVSMac $ExtGwMac \
 			    -setcookie 'ABCD' \
 			    -config ../config/controller`echo $CPRIO`.config >/dev/null 2>&1 < /dev/null
@@ -147,13 +147,13 @@ else
 				then
 					echo "Then != controller_app"
 					Enode=controller`echo $CPRIO`@`echo $LOCALIP`
-					setsid erl -detached -name $Enode -s boot start $RNODE -s controller_app change_configuration \
+					setsid erl -detached -name $Enode -kernel error_logger \{file,\"./`echo $Enode`.log\"\} -s boot start $RNODE -s controller_app change_configuration \
 					    $OVSIntIp $OVSIntMask $PublicIp $PublicMask $OVSMac $ExtGwMac \
 					    -setcookie 'ABCD' \
 					    -config ../config/controller`echo $CPRIO`.config >/dev/null 2>&1 < /dev/null
 				else
 					Enode=controller`echo $CPRIO`@`echo $LOCALIP`
-					setsid erl -detached -name $Enode -s boot start -s $APPLICATION change_configuration \
+					setsid erl -detached -name $Enode -kernel error_logger \{file,\"./`echo $Enode`.log\"\} -s boot start -s $APPLICATION change_configuration \
 					    $OVSIntIp $OVSIntMask $PublicIp $PublicMask $OVSMac $ExtGwMac \
 					    -setcookie 'ABCD' \
 					    -config ../config/controller`echo $CPRIO`.config >/dev/null 2>&1 < /dev/null
@@ -166,7 +166,7 @@ else
 		else
 			echo "You are trying to start the controller application. You need specify the priority of Controller App!\n"
 			Enode=controller`echo $CPRIO`@`echo $LOCALIP`
-					setsid erl -detached -name $Enode -s application start inets -s boot start -s $APPLICATION change_configuration \
+					setsid erl -detached -name $Enode -kernel error_logger \{file,\"./`echo $Enode`.log\"\} -s application start inets -s boot start -s $APPLICATION change_configuration \
 					    $OVSIntIp $OVSIntMask $PublicIp $PublicMask $OVSMac $ExtGwMac \
 					    -setcookie 'ABCD' >/dev/null 2>&1 < /dev/null 
 		fi
@@ -182,7 +182,7 @@ else
 				REALM='nfv.ru'
 				INBOUND_RELAY_PORT=3911
 				setsid erl -detached -name $DEnode \
-				 -s boot start $RNODE \
+				 -kernel error_logger \{file,\"./`echo $DEnode`.log\"\}  -s boot start $RNODE \
 				 -s controller_app change_configuration diameter $DEnode $LOCALIP $DIAMETER_MAC \
 				 -s irelay deploy $InboundRalayName $REALM $PublicIp $INBOUND_RELAY_PORT \
 				 -s relay_manager start $PublicIp \

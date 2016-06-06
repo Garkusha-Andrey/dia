@@ -25,11 +25,11 @@ start(T) ->
 	{ok, Log} = file:open(?LOG_FILE, [append]),
 	erlang:group_leader(Log, self()),
 
-    io:format("Just test string ~n"),
+    error_logger:info_msg("Just test string ~n"),
 	
 	SwitchIP = case inet_parse:address(atom_to_list(lists:nth(1, T))) of
 		{ok, IP}  		-> IP;
-		{error, Reason} -> io:format("Bad Addr: ~w. Reason ~w ~n", [lists:nth(1, T), Reason])
+		{error, Reason} -> error_logger:info_msg("Bad Addr: ~w. Reason ~w ~n", [lists:nth(1, T), Reason])
 	end,
 
 	ets:new(?RELAY_MANAGER_SERVER_TABLE, [set, public, named_table]),
@@ -70,37 +70,37 @@ relay_manager_listener(IPsrc, Index) ->
 			Result = ets:lookup(?RELAY_MANAGER_SERVER_TABLE, IPAddr),
 			case Result of
 				[] ->
-					io:format("relay_manager: Add server Message ~n"),
-					spawn(orelay, deploy, [[ServiceName, RealmID, IPsrc, IPdst, Portdst]]),
-					io:format("relay_manager: Add server orelay: deploy paased ~n"),
-					ets:insert(?RELAY_MANAGER_SERVER_TABLE, {IPAddr, ServiceName}),
-					io:format("relay_manager: Add server: ~p ~p ~p ~p ~p ~n", [ServiceName, RealmID, IPsrc, IPdst, Portdst]);
+					error_logger:info_msg("relay_manager: Add server Message ~n"),
+                                        spawr(orelay, deploy, [[ServiceName, RealmID, IPsrc, IPdst, Portdst]]),
+					error_logger:info_msg("relay_manager: Add server orelay: deploy paased ~n"),
+                                        ets:insert(?RELAY_MANAGER_SERVER_TABLE, {IPAddr, ServiceName}),
+					error_logger:info_msg("relay_manager: Add server: ~p ~p ~p ~p ~p ~n", [ServiceName, RealmID, IPsrc, IPdst, Portdst]);
 				Something ->
-					io:format("relay_manager: Add server: Has something ~p ~n", [Something])
+					error_logger:info_msg("relay_manager: Add server: Has something ~p ~n", [Something])
 			end,
 
-			io:format("relay_manager: Add server: End of edding ~n");
+			error_logger:info_msg("relay_manager: Add server: End of edding ~n");
 		{rm_server, Server}
 			when is_record(Server, servers) ->
-			io:format("relay_manager: Remove server: Just get server to remove ~p~n", [Server]),
+			error_logger:info_msg("relay_manager: Remove server: Just get server to remove ~p~n", [Server]),
 			
 			IPAddr = Server#servers.portIpAddr,
-			io:format("relay_manager: Remove server: IPAddr  ~p ~n", [IPAddr]),
+			error_logger:info_msg("relay_manager: Remove server: IPAddr  ~p ~n", [IPAddr]),
  			Result = ets:lookup(?RELAY_MANAGER_SERVER_TABLE, IPAddr),
-			io:format("relay_manager: Remove server: Result  ~p ~n", [Result]),
+			error_logger:info_msg("relay_manager: Remove server: Result  ~p ~n", [Result]),
 			case Result of
 				[{_,ServiceName}] ->
-					io:format("relay_manager: Remove server: ServiceName  ~p ~n", [ServiceName]),
+					error_logger:info_msg("relay_manager: Remove server: ServiceName  ~p ~n", [ServiceName]),
 					ets:delete(?RELAY_MANAGER_SERVER_TABLE, IPAddr),
 					orelay:stop(ServiceName);
 				[] ->
 					do_nothing;
 				Another ->
-					io:format("relay_manager: Remove server: Strange result ~p ~n", [Another])
+					error_logger:info_msg("relay_manager: Remove server: Strange result ~p ~n", [Another])
 			end,
-			io:format("relay_manager: Remove server: End~n");
+			error_logger:info_msg("relay_manager: Remove server: End~n");
 		UnexpectedMsg ->
-			io:format("relay_manager: received an unexpected msg: ~w ~n", [UnexpectedMsg])
+			error_logger:info_msg("relay_manager: received an unexpected msg: ~w ~n", [UnexpectedMsg])
 	end,
 
 	relay_manager_listener(IPsrc, Index+1).
