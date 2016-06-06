@@ -23,7 +23,7 @@ imports:
 inputs:
   controller_image:
     description: Openstack image name or id to use for the controller VM
-    default: 707cfcf2-2671-4b1f-ad02-31373c098f89
+    default: f9175941-0b2a-4f18-8a50-cd66e3f5b292
   dia_image:
     description: Openstack image name or id to use for the dimeterApp VM
     default: 814b0423-6cd1-48bf-920e-4223a7ac281f
@@ -423,7 +423,7 @@ node_templates:
                         sleep 10
                     else
                         # Run ODL controller
-                        JAVA_MAX_MEM=4G JAVA_MAX_PERM_MEM=512m /home/nfvpilot/opendaylight/distribution/distributions/karaf/target/assembly/bin/start
+                        JAVA_MAX_MEM=4G JAVA_MAX_PERM_MEM=512m /home/nfvpilot/opendaylight/target/assembly/bin/start
                         sleep 10
                     fi
                 done
@@ -484,7 +484,7 @@ node_templates:
                         sleep 10
                     else
                         # Run ODL controller
-                        JAVA_MAX_MEM=4G JAVA_MAX_PERM_MEM=512m /home/nfvpilot/opendaylight/distribution/distributions/karaf/target/assembly/bin/start
+                        JAVA_MAX_MEM=4G JAVA_MAX_PERM_MEM=512m /home/nfvpilot/opendaylight/target/assembly/bin/start
                         sleep 10
                     fi
                 done
@@ -545,7 +545,7 @@ node_templates:
                         sleep 10
                     else
                         # Run ODL controller
-                        JAVA_MAX_MEM=4G JAVA_MAX_PERM_MEM=512m /home/nfvpilot/opendaylight/distribution/distributions/karaf/target/assembly/bin/start
+                        JAVA_MAX_MEM=4G JAVA_MAX_PERM_MEM=512m /home/nfvpilot/opendaylight/target/assembly/bin/start
                         sleep 10
                     fi
                 done
