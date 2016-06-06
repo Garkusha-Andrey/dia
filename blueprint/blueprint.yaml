@@ -1,0 +1,895 @@
+tosca_definitions_version: cloudify_dsl_1_2
+
+description: >
+  Test blueprint
+
+#############################################################################  
+# imports allow the author of a blueprint to reuse blueprint files or parts #
+# of them and use predefined types                                          #
+#############################################################################
+imports:
+  - http://www.getcloudify.org/spec/cloudify/3.3/types.yaml
+  - http://www.getcloudify.org/spec/openstack-plugin/1.3/plugin.yaml
+  - http://www.getcloudify.org/spec/fabric-plugin/1.3/plugin.yaml
+  - http://www.getcloudify.org/spec/diamond-plugin/1.3/plugin.yaml
+
+#################################################################################
+# inputs are parameters injected into the blueprint upon deployment creation.   #
+# These parameters can be referenced by using the get_input intrinsic function. #
+# Inputs are useful when there’s a need to inject parameters to the blueprint   # 
+# which were unknown when the blueprint was created and can be used for         #
+# distinction between different deployments of the same blueprint.              #
+#################################################################################
+inputs:
+  controller_image:
+    description: Openstack image name or id to use for the controller VM
+    default: 707cfcf2-2671-4b1f-ad02-31373c098f89
+  dia_image:
+    description: Openstack image name or id to use for the dimeterApp VM
+    default: 814b0423-6cd1-48bf-920e-4223a7ac281f
+  vSwitch_image:
+    description: Openstack image name or id to use for the vSwitch VM
+    default: f7b17e46-b64e-485c-a581-be8b8af77f14
+  flavor:
+    description: Openstack flavor name or id to use for the new server
+    default: 2
+  controller_flavor:
+    description: Openstack flavor name or id to use for the new server
+    default: 1f9e232a-2335-468e-a33b-5b130ee9db3b
+  default_security_group:
+    description: Openstack default security group id
+    default: 6150f3bd-b137-4715-823d-166c8b8a608e
+  public_network:
+    description: Cloudify manager network id
+    default: cedc0bcd-1b77-42c4-9722-979ec1cfcef5
+
+############################################################################    
+# node_types are used for defining common properties and behaviors for     #
+# node-templates. node-templates can then be created based on these types, #
+# inheriting their definitions.                                            #
+############################################################################
+node_types:
+  dia.nodes.MonitoredServer:
+    derived_from: cloudify.openstack.nodes.Server
+############################################################################
+# The properties property may be used to define a common properties schema #
+# for node templates.                                                      #
+############################################################################
+    properties:
+      server:
+        default:
+          # Provides image id for created instance
+          image: { get_input: dia_image }
+          # Provides flavor id for created instance          
+          flavor: { get_input: flavor }
+###########################################################################
+# Interfaces provide a way to map logical tasks to executable operations. #
+###########################################################################
+    interfaces:
+      cloudify.interfaces.monitoring_agent:
+        # Attach tasks for Diamond plugin which used for collecting of metrics
+        install:
+          implementation: diamond.diamond_agent.tasks.install
+          inputs:
+            diamond_config:
+              default:
+                interval: 1
+        start: diamond.diamond_agent.tasks.start
+        stop: diamond.diamond_agent.tasks.stop
+        uninstall: diamond.diamond_agent.tasks.uninstall
+      cloudify.interfaces.monitoring:
+        start:
+          implementation: diamond.diamond_agent.tasks.add_collectors
+          inputs:
+            collectors_config:
+              default:
+                # Create and configure collectors for needed metrics
+                ExampleCollector: {}
+                TestCollector: 
+                  path: collector/example.py
+        stop:
+          implementation: diamond.diamond_agent.tasks.del_collectors
+          inputs:
+            collectors_config:
+              default:
+                ExampleCollector: {}
+                TestCollector: 
+                  path: collector/example.py
+  vSwitch.nodes.MonitoredServer:
+    derived_from: cloudify.openstack.nodes.Server
+    properties:
+      server:
+        default:
+          image: { get_input: vSwitch_image }
+          flavor: { get_input: flavor }
+    interfaces:
+      cloudify.interfaces.monitoring_agent:
+        install:
+          implementation: diamond.diamond_agent.tasks.install
+          inputs:
+            diamond_config:
+              default:
+                interval: 1
+        start: diamond.diamond_agent.tasks.start
+        stop: diamond.diamond_agent.tasks.stop
+        uninstall: diamond.diamond_agent.tasks.uninstall
+      cloudify.interfaces.monitoring:
+        start:
+          implementation: diamond.diamond_agent.tasks.add_collectors
+          inputs:
+            collectors_config:
+              default:
+                ExampleCollector: {}
+        stop:
+          implementation: diamond.diamond_agent.tasks.del_collectors
+          inputs:
+            collectors_config:
+              default:
+                ExampleCollector: {}
+  controller.nodes.MonitoredServer:
+    derived_from: cloudify.openstack.nodes.Server
+    properties:
+      server:
+        default:
+          image: { get_input: controller_image }
+          flavor: { get_input: controller_flavor }
+    interfaces:
+      cloudify.interfaces.monitoring_agent:
+        install:
+          implementation: diamond.diamond_agent.tasks.install
+          inputs:
+            diamond_config:
+              default:
+                interval: 1
+        start: diamond.diamond_agent.tasks.start
+        stop: diamond.diamond_agent.tasks.stop
+        uninstall: diamond.diamond_agent.tasks.uninstall
+      cloudify.interfaces.monitoring:
+        start:
+          implementation: diamond.diamond_agent.tasks.add_collectors
+          inputs:
+            collectors_config:
+              default:
+                ExampleCollector: {}
+        stop:
+          implementation: diamond.diamond_agent.tasks.del_collectors
+          inputs:
+            collectors_config:
+              default:
+                ExampleCollector: {}
+
+#########################################################################
+# node_templates represent the actual instances of node types which     #
+# would eventually represent a running application/service as described #
+# in the blueprint.                                                     #
+#########################################################################                
+node_templates:
+  # Allocate a floating IP from a given floating IP pool and create cloudify node
+  floating_ip:
+    type: cloudify.openstack.nodes.FloatingIP
+  # Create cloudify node which associated to the Openstack public network
+  external_network:
+    type: cloudify.openstack.nodes.Network
+    properties:
+      use_external_resource: true
+      resource_id: {get_input: public_network}
+  # Create Openstack router which connected to the public network
+  vSwitch_router:
+    type: cloudify.openstack.nodes.Router
+    properties:
+      resource_id: vSwitch_router
+    relationships:
+      - target: external_network
+        type: cloudify.relationships.connected_to
+  # Create Openstack network for vSwitch instance
+  vSwitch_network:
+    type: cloudify.openstack.nodes.Network
+    properties:
+      resource_id: vSwitch_network
+  # Create Openstack subnet with cidr: 10.10.2.0/24 and gw: 10.10.2.1 this subnet connected to the vSwitch_router
+  vSwitch_network_subnet:
+    type: cloudify.openstack.nodes.Subnet
+    properties:
+      resource_id: vSwitch_network_subnet
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          inputs:
+            args:
+              cidr: 10.10.2.0/24
+              ip_version: 4
+              gateway_ip: 10.10.2.1
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: vSwitch_network
+      - type: cloudify.openstack.subnet_connected_to_router  
+        target: vSwitch_router
+  # Create control_and_management_network network
+  control_and_management_network:
+    type: cloudify.openstack.nodes.Network
+    properties:
+      resource_id: control_and_management_network
+  # Create control_and_management_network_subnet subnet with cidr: 10.10.0.0/24 and gw: 10.10.0.1
+  control_and_management_network_subnet:
+    type: cloudify.openstack.nodes.Subnet
+    properties:
+      resource_id: control_and_management_network_subnet
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          inputs:
+            args:
+              cidr: 10.10.0.0/24
+              ip_version: 4
+              gateway_ip: 10.10.0.1
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: control_and_management_network
+  # Create payload_network network
+  payload_network:
+    type: cloudify.openstack.nodes.Network
+    properties:
+      resource_id: payload_network
+  # Create payload_network_subnet subnet with cidr: 10.10.1.0/24 and gw: 10.10.1.1
+  payload_network_subnet:
+    type: cloudify.openstack.nodes.Subnet
+    properties:
+      resource_id: payload_network_subnet
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          inputs:
+            args:
+              cidr: 10.10.1.0/24
+              ip_version: 4
+              gateway_ip: 10.10.1.1
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: payload_network
+  # Create controller1_eth0_port with static ip: 10.10.0.55 and default security group
+  controller1_eth0_port:
+    type: cloudify.openstack.nodes.Port
+    properties:
+      resource_id: controller1_eth0_port
+      fixed_ip: 10.10.0.55
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          inputs:
+            args:
+              security_groups: [{get_input: default_security_group}]
+      cloudify.interfaces.monitoring:
+        start:
+          # Script, which executed on cloudify-manager instance 
+          # and get mac-address of the interface and save it as runtime propertie
+          implementation: scripts/get_port_mac.sh
+          inputs:
+            process:
+              cwd: /home/centos
+            port_id: {get_attribute: [controller1_eth0_port, external_id]}
+          executor: central_deployment_agent
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: control_and_management_network
+      - type: cloudify.relationships.depends_on
+        target: control_and_management_network_subnet
+  controller2_eth0_port:
+    type: cloudify.openstack.nodes.Port
+    properties:
+      resource_id: controller2_eth0_port
+      fixed_ip: 10.10.0.56
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          inputs:
+            args:
+              security_groups: [{get_input: default_security_group}]
+      cloudify.interfaces.monitoring:
+        start:
+          implementation: scripts/get_port_mac.sh
+          inputs:
+            process:
+              cwd: /home/centos
+            port_id: {get_attribute: [controller2_eth0_port, external_id]}
+          executor: central_deployment_agent
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: control_and_management_network
+      - type: cloudify.relationships.depends_on
+        target: control_and_management_network_subnet
+  controller3_eth0_port:
+    type: cloudify.openstack.nodes.Port
+    properties:
+      resource_id: controller3_eth0_port
+      fixed_ip: 10.10.0.57
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          inputs:
+            args:
+              security_groups: [{get_input: default_security_group}]
+      cloudify.interfaces.monitoring:
+        start:
+          implementation: scripts/get_port_mac.sh
+          inputs:
+            process:
+              cwd: /home/centos
+            port_id: {get_attribute: [controller3_eth0_port, external_id]}
+          executor: central_deployment_agent
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: control_and_management_network
+      - type: cloudify.relationships.depends_on
+        target: control_and_management_network_subnet
+  vSwitch_eth0_port:
+    type: cloudify.openstack.nodes.Port
+    properties:
+      resource_id: vSwitch_eth0_port
+      fixed_ip: 10.10.0.60
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          inputs:
+            args:
+              security_groups: [{get_input: default_security_group}]
+      cloudify.interfaces.monitoring:
+        start:
+          implementation: scripts/get_port_mac.sh
+          inputs:
+            process:
+              cwd: /home/centos
+            port_id: {get_attribute: [vSwitch_eth0_port, external_id]}
+          executor: central_deployment_agent
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: control_and_management_network
+      - type: cloudify.relationships.depends_on
+        target: control_and_management_network_subnet
+  # Create vSwitch_eth1_port with static ip: 10.10.1.56 and disabled security groups
+  vSwitch_eth1_port:
+    type: cloudify.openstack.nodes.Port
+    properties:
+      resource_id: vSwitch_eth1_port
+      fixed_ip: 10.10.1.56
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          inputs:
+            args:
+              security_groups: []
+              port_security_enabled: false
+        configure:
+          implementation: scripts/get_port_mac.sh
+          inputs:
+            process:
+              cwd: /home/centos
+            port_id: {get_attribute: [vSwitch_eth1_port, external_id]}
+          executor: central_deployment_agent
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: payload_network
+      - type: cloudify.relationships.depends_on
+        target: payload_network_subnet
+  vSwitch_eth3_port:
+    type: cloudify.openstack.nodes.Port
+    properties:
+      resource_id: vSwitch_eth3_port
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          inputs:
+            args:
+              security_groups: [{get_input: default_security_group}]
+        configure:
+          implementation: scripts/get_port_mac.sh
+          inputs:
+            process:
+              cwd: /home/centos
+            port_id: {get_attribute: [vSwitch_eth3_port, external_id]}
+          executor: central_deployment_agent
+    # This interface connected to the floating ip
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: vSwitch_network
+      - type: cloudify.relationships.depends_on
+        target: vSwitch_network_subnet
+      - type: cloudify.openstack.port_connected_to_floating_ip
+        target: floating_ip
+  # Create Controller instance from controller.nodes.MonitoredServer and connected to the controller1_eth0_port
+  controller1:
+    type: controller.nodes.MonitoredServer
+    properties:
+      resource_id: Controller1_VM
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          inputs:
+            args:
+              userdata: |
+                #!/bin/bash
+                sudo sh -c 'echo "127.0.1.1 `hostname`" >> /etc/hosts'
+                sudo sh -c 'echo "10.67.79.3 cloudify-manager-server" >> /etc/hosts'
+                sudo touch /etc/network/interfaces.d/eth1.cfg
+                sudo sh -c 'echo "auto eth1\niface eth1 inet dhcp" > /etc/network/interfaces.d/eth1.cfg'
+                sudo ifup eth1
+                /home/nfvpilot/start_odl.py 10.10.0.55 10.10.0.56 10.10.0.57
+                # Create and run script for monitoring ODL process
+                touch /home/nfvpilot/monitor_karaf.sh
+                cat > /home/nfvpilot/monitor_karaf.sh << EOT
+                #!/bin/sh
+                while true; do
+                    if ps aux | grep -v grep | grep -v monitor_karaf.sh | grep -c karaf > /dev/null
+                    then
+                        sleep 10
+                    else
+                        # Run ODL controller
+                        JAVA_MAX_MEM=4G JAVA_MAX_PERM_MEM=512m /home/nfvpilot/opendaylight/distribution/distributions/karaf/target/assembly/bin/start
+                        sleep 10
+                    fi
+                done
+                EOT
+                chmod +x /home/nfvpilot/monitor_karaf.sh
+                /home/nfvpilot/monitor_karaf.sh &
+        configure:
+          # Script executed on cloudify-manager and comunicates with Openstack API
+          implementation: scripts/controller_script_plugin.sh
+          inputs:
+            process:
+              cwd: /home/centos
+            vSwitch_network_subnet_id: {get_attribute: [vSwitch_network_subnet, external_id]}
+#            node_id: {get_property: [controller1, node_id]}
+            controller1_eth0_ip: {get_attribute: [controller1_eth0_port, fixed_ip_address]}
+            controller2_eth0_ip: {get_attribute: [controller2_eth0_port, fixed_ip_address]}
+          executor: central_deployment_agent
+        start:
+          # Script executed on instance and perform unix commands
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/controller_fubric_plugin.sh
+            process:
+              args: [{get_attribute: [vSwitch_eth1_port, fixed_ip_address]}, {get_attribute: [vSwitch_eth3_port, port_mac_clean]}, {get_attribute: [controller1, gw_mac_clean]}, {get_attribute: [controller1, controller_priority]}, {get_attribute: [vSwitch_eth3_port, fixed_ip_address]}, {get_attribute: [controller1_eth0_port, fixed_ip_address]}, {get_attribute: [controller2_eth0_port, fixed_ip_address]}, {get_attribute: [controller3_eth0_port, fixed_ip_address]}]
+            fabric_env:
+              host_string: {get_attribute: [controller1, ip]}
+              user: nfvpilot
+              password: nfvpilot
+    relationships:
+      - type: cloudify.openstack.server_connected_to_port
+        target: controller1_eth0_port
+      - type: cloudify.relationships.depends_on
+        target: controller1_eth0_port
+  controller2:
+    type: controller.nodes.MonitoredServer
+    properties:
+      resource_id: Controller2_VM
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          inputs:
+            args:
+              userdata: |
+                #!/bin/bash
+                sudo sh -c 'echo "127.0.1.1 `hostname`" >> /etc/hosts'
+                sudo sh -c 'echo "10.67.79.3 cloudify-manager-server" >> /etc/hosts'
+                sudo touch /etc/network/interfaces.d/eth1.cfg
+                sudo sh -c 'echo "auto eth1\niface eth1 inet dhcp" > /etc/network/interfaces.d/eth1.cfg'
+                sudo ifup eth1
+                /home/nfvpilot/start_odl.py 10.10.0.55 10.10.0.56 10.10.0.57
+                # Create and run script for monitoring ODL process
+                touch /home/nfvpilot/monitor_karaf.sh
+                cat > /home/nfvpilot/monitor_karaf.sh << EOT
+                #!/bin/sh
+                while true; do
+                    if ps aux | grep -v grep | grep -v monitor_karaf.sh | grep -c karaf > /dev/null
+                    then
+                        sleep 10
+                    else
+                        # Run ODL controller
+                        JAVA_MAX_MEM=4G JAVA_MAX_PERM_MEM=512m /home/nfvpilot/opendaylight/distribution/distributions/karaf/target/assembly/bin/start
+                        sleep 10
+                    fi
+                done
+                EOT
+                chmod +x /home/nfvpilot/monitor_karaf.sh
+                /home/nfvpilot/monitor_karaf.sh &
+        configure:
+          # Script executed on cloudify-manager and comunicates with Openstack API
+          implementation: scripts/controller_script_plugin.sh
+          inputs:
+            process:
+              cwd: /home/centos
+            vSwitch_network_subnet_id: {get_attribute: [vSwitch_network_subnet, external_id]}
+#            node_id: { get_property: [controller2, node_id] }
+            controller1_eth0_ip: {get_attribute: [controller1_eth0_port, fixed_ip_address]}
+            controller2_eth0_ip: {get_attribute: [controller2_eth0_port, fixed_ip_address]}
+          executor: central_deployment_agent
+        start:
+          # Script executed on instance and perform unix commands
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/controller_fubric_plugin.sh
+            process:
+              args: [{get_attribute: [vSwitch_eth1_port, fixed_ip_address]}, {get_attribute: [vSwitch_eth3_port, port_mac_clean]}, {get_attribute: [controller2, gw_mac_clean]}, {get_attribute: [controller2, controller_priority]}, {get_attribute: [vSwitch_eth3_port, fixed_ip_address]}, {get_attribute: [controller1_eth0_port, fixed_ip_address]}, {get_attribute: [controller2_eth0_port, fixed_ip_address]}, {get_attribute: [controller3_eth0_port, fixed_ip_address]}]
+            fabric_env:
+              host_string: {get_attribute: [controller2, ip]}
+              user: nfvpilot
+              password: nfvpilot
+    relationships:
+      - type: cloudify.openstack.server_connected_to_port
+        target: controller2_eth0_port
+      - type: cloudify.relationships.depends_on
+        target: controller2_eth0_port
+  controller3:
+    type: controller.nodes.MonitoredServer
+    properties:
+      resource_id: Controller3_VM     
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          inputs:
+            args:
+              userdata: |
+                #!/bin/bash
+                sudo sh -c 'echo "127.0.1.1 `hostname`" >> /etc/hosts'
+                sudo sh -c 'echo "10.67.79.3 cloudify-manager-server" >> /etc/hosts'
+                sudo touch /etc/network/interfaces.d/eth1.cfg
+                sudo sh -c 'echo "auto eth1\niface eth1 inet dhcp" > /etc/network/interfaces.d/eth1.cfg'
+                sudo ifup eth1
+                /home/nfvpilot/start_odl.py 10.10.0.55 10.10.0.56 10.10.0.57
+                # Create and run script for monitoring ODL process
+                touch /home/nfvpilot/monitor_karaf.sh
+                cat > /home/nfvpilot/monitor_karaf.sh << EOT
+                #!/bin/sh
+                while true; do
+                    if ps aux | grep -v grep | grep -v monitor_karaf.sh | grep -c karaf > /dev/null
+                    then
+                        sleep 10
+                    else
+                        # Run ODL controller
+                        JAVA_MAX_MEM=4G JAVA_MAX_PERM_MEM=512m /home/nfvpilot/opendaylight/distribution/distributions/karaf/target/assembly/bin/start
+                        sleep 10
+                    fi
+                done
+                EOT
+                chmod +x /home/nfvpilot/monitor_karaf.sh
+                /home/nfvpilot/monitor_karaf.sh &
+        configure:
+          # Script executed on cloudify-manager and comunicates with Openstack API
+          implementation: scripts/controller_script_plugin.sh
+          inputs:
+            process:
+              cwd: /home/centos
+            vSwitch_network_subnet_id: {get_attribute: [vSwitch_network_subnet, external_id]}
+#            node_id: { get_property: [controller3, node_id] }
+            controller1_eth0_ip: {get_attribute: [controller1_eth0_port, fixed_ip_address]}
+            controller2_eth0_ip: {get_attribute: [controller2_eth0_port, fixed_ip_address]}
+          executor: central_deployment_agent
+        start:
+          # Script executed on instance and perform unix commands
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/controller_fubric_plugin.sh
+            process:
+              args: [{get_attribute: [vSwitch_eth1_port, fixed_ip_address]}, {get_attribute: [vSwitch_eth3_port, port_mac_clean]}, {get_attribute: [controller3, gw_mac_clean]}, {get_attribute: [controller3, controller_priority]}, {get_attribute: [vSwitch_eth3_port, fixed_ip_address]}, {get_attribute: [controller1_eth0_port, fixed_ip_address]}, {get_attribute: [controller2_eth0_port, fixed_ip_address]}, {get_attribute: [controller3_eth0_port, fixed_ip_address]}]
+            fabric_env:
+              host_string: {get_attribute: [controller3, ip]}
+              user: nfvpilot
+              password: nfvpilot
+    relationships:
+      - type: cloudify.openstack.server_connected_to_port
+        target: controller3_eth0_port
+      - type: cloudify.relationships.depends_on
+        target: controller3_eth0_port
+  # Create Dia instance from dia.nodes.MonitoredServer
+  dia:
+    type: dia.nodes.MonitoredServer
+#    instances:
+#      deploy: 2
+    properties:
+      resource_id: Dia_VM
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        configure:
+          # Script executed on cloudify-manager and comunicates with Openstack API
+          implementation: scripts/dia_script_plugin.sh
+          inputs:
+            process:
+              cwd: /home/centos
+            security_group: {get_input: default_security_group}
+          executor: central_deployment_agent
+        start:
+          # Script executed on instance and perform unix commands
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/dia_fubric_plugin.sh
+            process:
+              args: [{get_attribute: [vSwitch_eth1_port, fixed_ip_address]}, {get_attribute: [vSwitch_eth3_port, fixed_ip_address]}, {get_attribute: [SELF, inst_id]}, {get_attribute: [SELF, dia_mac]}]
+            fabric_env:
+              host_string: {get_attribute: [SELF, ip]}
+              user: nfvpilot
+              password: nfvpilot
+    relationships:
+      # Create interface in control_and_management_network_subnet
+      - type: cloudify.relationships.connected_to
+        target: control_and_management_network
+      - type: cloudify.relationships.depends_on
+        target: control_and_management_network_subnet
+      # Create interface in payload_network_subnet
+      - type: cloudify.relationships.connected_to
+        target: payload_network
+      - type: cloudify.relationships.depends_on
+        target: payload_network_subnet
+      # Creation will be started after controller1, controller2 and controller3
+      - type: cloudify.relationships.depends_on
+        target: controller1
+      - type: cloudify.relationships.depends_on
+        target: controller2
+      - type: cloudify.relationships.depends_on
+        target: controller3
+  # Create vSwitch instance from vSwitch.nodes.MonitoredServer
+  vSwitch:
+    type: vSwitch.nodes.MonitoredServer
+    properties:
+      resource_id: vSwitch_VM
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        configure:
+          # Script executed on cloudify-manager and comunicates with Openstack API
+          implementation: scripts/vSwitch_script_plugin.sh
+          inputs:
+            process:
+              cwd: /home/centos
+            vSwitch_network_subnet_id: {get_attribute: [vSwitch_network_subnet, external_id]}
+            vSwitch_id: {get_attribute: [vSwitch, external_id]}
+          executor: central_deployment_agent
+        start:
+          # Script executed on instance and perform unix commands
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/vSwitch_fubric_plugin.sh
+            process:
+              args: [{get_attribute: [controller1_eth0_port, fixed_ip_address]}, {get_attribute: [controller2_eth0_port, fixed_ip_address]}, {get_attribute: [controller3_eth0_port, fixed_ip_address]}, {get_attribute: [vSwitch_eth3_port, fixed_ip_address]}, {get_attribute: [vSwitch_eth1_port, fixed_ip_address]}]
+            fabric_env:
+              host_string: {get_attribute: [vSwitch, ip]}
+              user: nfvpilot
+              password: nfvpilot
+    relationships:
+      # Instance connected to the vSwitch_eth0_port
+      - type: cloudify.openstack.server_connected_to_port
+        target: vSwitch_eth0_port
+      - type: cloudify.relationships.depends_on
+        target: vSwitch_eth0_port
+      # Instance connected to the vSwitch_eth1_port
+      - type: cloudify.openstack.server_connected_to_port
+        target: vSwitch_eth1_port
+      - type: cloudify.relationships.depends_on
+        target: vSwitch_eth1_port 
+      # Instance connected to the vSwitch_eth3_port
+      - type: cloudify.openstack.server_connected_to_port
+        target: vSwitch_eth3_port
+      - type: cloudify.relationships.depends_on
+        target: vSwitch_eth3_port
+      # Creation will be started after dia
+      - type: cloudify.relationships.depends_on
+        target: dia
+
+###############################################################################
+# By declaring plugins we can install python modules and use the installed    #
+# or preinstalled modules to perform different operations. We can also decide #  
+# where a specific plugin’s operations will be executed.                      #  
+###############################################################################   
+plugins:
+  custom_workflows:
+    executor: central_deployment_agent
+    source: workflowsPlugin
+
+#######################################################################################    
+# workflows define a set of tasks that can be executed on a node or a group of nodes, #
+# and the execution order of these tasks, serially or in parallel.                    #
+# A task may be an operation (implemented by a plugin),                               #
+# but it may also be other actions, including arbitrary code.                         #
+#######################################################################################
+workflows:
+  custom_scale:
+    mapping: custom_workflows.plugin.custom_workflows_plugin.custom_scale
+    # Description for input arguments for workflow
+    parameters:
+      node_id:
+        description: Which node (not node instance) to scale
+      delta:
+        description: >
+            How many nodes should be added/removed.
+            A positive number denotes increase of instances.
+            A negative number denotes decrease of instances.
+        default: 1
+      scale_compute:
+        description: >
+            If node is contained (transitively) within a compute node
+            and this property is 'true', operate on compute node instead
+            of 'node_id'
+        default: true
+  custom_install:
+    mapping: custom_workflows.plugin.custom_workflows_plugin.custom_install
+  custom_heal:
+    mapping: custom_workflows.plugin.custom_workflows_plugin.custom_auto_heal_reinstall_node_subgraph
+    parameters:
+      node_instance_id:
+        description: Which node instance to heal
+      diagnose_value:
+        description: Diagnosed reason of failure
+        default: Not provided
+
+##########################################################################        
+# policies provide a way of analyzing a stream of events that correspond #
+# to a group of nodes (and their instances).                             #
+########################################################################## 
+policy_types:
+  host_failure:
+    # Decription for parameters of the heal_policy
+    properties: &BASIC_AH_POLICY_PROPERTIES
+      policy_operates_on_group:
+        description: |
+          If the policy should maintain its state for the whole group
+          or each node instance individually.
+        default: false
+      is_node_started_before_workflow:
+        description: Before triggering workflow, check if the node state is started
+        default: true
+      interval_between_workflows:
+        description: |
+          Trigger workflow only if the last workflow was triggered earlier than interval-between-workflows seconds ago.
+          if < 0  workflows can run concurrently.
+        default: -1
+      service:
+        description: Service names whose events should be taken into consideration
+        default:
+          - service
+    source: policy/heal_policy.clj
+## Default policy for scaling, not provide functionality for instance count value
+#  threshold:
+#    # Decription for parameters of the scale_policy
+#    properties: &THRESHOLD_BASED_POLICY_PROPERTIES
+#      <<: *BASIC_AH_POLICY_PROPERTIES
+#      service:
+#        description: The service name
+#        default: service
+#      threshold:
+#        description: The metric threshold value
+#      upper_bound:
+#        description: |
+#          boolean value for describing the semantics of the threshold.
+#          if 'true': metrics whose value is bigger than the threshold will cause the triggers to be processed.
+#          if 'false': metrics with values lower than the threshold will do so.
+#        default: true
+#      stability_time:
+#        description: How long a threshold must be breached before the triggers will be processed
+#        default: 0
+#    source: policy/scale_policy.clj
+  scale_policy:
+    source: policy/scale.clj
+    properties:
+      policy_operates_on_group:
+        default: true
+      service_selector:
+        description: regular expression that selects the metric to be measured
+        default: ".*"
+      moving_window_size:
+        description: the moving window for individual sources in secs
+        default: 10
+      scale_threshold:
+        description: the value to trigger scaling over aggregrated moving values
+      scale_limit:
+        description: scaling limit
+        default: 10
+      scale_direction:
+        description: scale up ('<') or scale down ('>')
+        default: '<'
+      cooldown_time:
+        description: the time to wait before evaluating again after a scale
+        default: 60
+
+#############################################################################
+# policy_triggers specify the implementation of actions invoked by policies #
+# and declare the properties that define the trigger’s behavior.            #
+#############################################################################
+policy_triggers:
+  execute_workflow:
+    # Decription for parameters of the trigger
+    parameters:
+      workflow:
+        description: Workflow name to execute
+      workflow_parameters:
+        description: Workflow paramters
+        default: {}
+      force:
+        description: |
+          Should the workflow be executed even when another execution
+          for the same workflow is currently in progress
+        default: false
+      allow_custom_parameters:
+        description: |
+          Should parameters not defined in the workflow parameters
+          schema be accepted
+        default: false
+      socket_timeout:
+        description: Socket timeout when making request to manager REST in ms
+        default: 1000
+      conn_timeout:
+        description: Connection timeout when making request to manager REST in ms
+        default: 1000
+    source: policy/trigger.clj
+
+#####################################################################
+# groups provide a way of configuring shared behavior for different #
+# sets of node_templates.                                           #
+#####################################################################
+groups:
+  # Arbitrary group name
+  scale_group:
+    # All nodes in this group were defined 
+    # in the node_templates section.
+    # All events that belong to node instances of
+    # these nodes will be processed by all policies specified
+    # within the group
+    members: [dia]
+    # Each group specifies a set of policies
+    policies:
+      scaleup_one_instance:
+        type: scale_policy
+        properties:
+          policy_operates_on_group: true
+          scale_limit: 5
+          scale_direction: '<'
+          scale_threshold: 12
+          service_selector: .*dia.*.test.client.count.metric
+          moving_window_size: 100
+          cooldown_time: 60
+        triggers:
+          execute_scale_workflow:
+            type: execute_workflow
+            # Trigger specific configuration
+            parameters:
+              workflow: custom_scale
+              workflow_parameters:
+                node_id: dia
+                delta: 1
+      scaledown_one_instance:
+        type: scale_policy
+        properties:
+          scale_limit: 1
+          scale_direction: '>'
+          scale_threshold: 1
+          service_selector: .*dia.*.test.client.count.metric
+          moving_window_size: 180
+          cooldown_time: 180
+        triggers:
+          execute_scale_workflow:
+            type: execute_workflow
+            parameters:
+              workflow: custom_scale
+              workflow_parameters:
+                node_id: dia
+                delta: -1   
+  heal_group:
+    members: [controller1, controller2, controller3, dia, vSwitch]
+    policies:
+      host_failure_policy:
+        type: host_failure
+        properties:
+          service:
+            - example.my.example.metric
+        triggers:
+          heal_trigger:
+            type: execute_workflow
+            parameters:
+              workflow: custom_heal
+              workflow_parameters:
+                node_instance_id: { get_property: [SELF, node_id] }
+##############################################################################################
+# outputs provide a way of exposing global aspects of a deployment.                          #
+# When deployed, a blueprint can expose specific outputs of that deployment - for instance,  #
+# an endpoint of a server or any other runtime or static information of a specific resource. #                
+##############################################################################################                
+outputs:
+  endpoint:
+    description: Host
+    value: {get_attribute: [floating_ip, floating_ip_address]}

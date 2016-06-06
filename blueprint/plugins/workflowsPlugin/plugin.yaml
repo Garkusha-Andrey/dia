@@ -1,0 +1,4 @@
+plugins:
+  workflowsPlugin:
+    executor: central_deployment_agent
+    source: workflowsPlugin
