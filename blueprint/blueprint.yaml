@@ -738,7 +738,7 @@ policy_types:
         description: |
           Trigger workflow only if the last workflow was triggered earlier than interval-between-workflows seconds ago.
           if < 0  workflows can run concurrently.
-        default: 0
+        default: -1
       service:
         description: Service names whose events should be taken into consideration
         default:
@@ -837,10 +837,11 @@ groups:
         type: scale_policy
         properties:
           policy_operates_on_group: true
-          scale_limit: 2
+          scale_limit: 5
           scale_direction: '<'
           scale_threshold: 12
           service_selector: .*dia.*.test.client.count.metric
+          moving_window_size: 100
           cooldown_time: 60
         triggers:
           execute_scale_workflow:
@@ -858,7 +859,8 @@ groups:
           scale_direction: '>'
           scale_threshold: 1
           service_selector: .*dia.*.test.client.count.metric
-          cooldown_time: 300
+          moving_window_size: 180
+          cooldown_time: 180
         triggers:
           execute_scale_workflow:
             type: execute_workflow
