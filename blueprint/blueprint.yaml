@@ -429,6 +429,7 @@ node_templates:
                 done
                 EOT
                 chmod +x /home/nfvpilot/monitor_karaf.sh
+                sleep 10
                 /home/nfvpilot/monitor_karaf.sh &
         configure:
           # Script executed on cloudify-manager and comunicates with Openstack API
@@ -490,6 +491,7 @@ node_templates:
                 done
                 EOT
                 chmod +x /home/nfvpilot/monitor_karaf.sh
+                sleep 10
                 /home/nfvpilot/monitor_karaf.sh &
         configure:
           # Script executed on cloudify-manager and comunicates with Openstack API
@@ -551,6 +553,7 @@ node_templates:
                 done
                 EOT
                 chmod +x /home/nfvpilot/monitor_karaf.sh
+                sleep 10
                 /home/nfvpilot/monitor_karaf.sh &
         configure:
           # Script executed on cloudify-manager and comunicates with Openstack API
