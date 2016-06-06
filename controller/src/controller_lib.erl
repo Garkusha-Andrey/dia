@@ -17,8 +17,7 @@
 	 get_diaconfig/0,
 	 get_instance_by_node/1,
 	 get_all_servers/0,
-	 check_mnnesia_entries/1,
-	 list_clents_table/0,
+	 check_mnesia_entries/1,
 
 %% Routing interface
          get_ovsIp/0,
@@ -251,9 +250,32 @@ get_extGwMac() ->
     GlobalDataRec#globalData.extGwMac.
 
 list_instance_weights() ->
+    LClients = list_clients(),
+    LClientsLen = length(LClients),
+
+    case LClientsLen of
+	%% to not divide by 0
+	0 -> NOfClients = 1;
+	_ -> NOfClients = LClientsLen
+    end,
+
+    N_clients_by_nodeid = fun(Clients, NodeId) ->
+
+        lists:foldl(fun(Client, Sum) ->
+                        case Client#clients.nodeId of
+                            NodeId ->
+                                Sum+1;
+                            _ ->
+                                Sum
+                        end
+                    end, 0, Clients)
+
+                          end,
+
     lists:map(fun(D) ->
                       #instanceWeight{nodeId=D#diaLocalConfig.nodeId,
-                                      weight=100}
+                                      weight=100*(1-
+        N_clients_by_nodeid(LClients, D#diaLocalConfig.nodeId)/NOfClients)}
               end, get_diaLocalIpConfig()).
 
 list_instance_weights_stub() ->
@@ -657,7 +679,7 @@ initialize_routing(Tries) ->
     end.
 
 %%Checks if mnesia table is empty:
-check_mnnesia_entries(Table) ->
+check_mnesia_entries(Table) ->
     F = fun() ->
                 case mnesia:first(Table) of
                     '$end_of_table' ->
@@ -671,23 +693,3 @@ check_mnnesia_entries(Table) ->
    end,
    check_transaction(mnesia:transaction(F), "check_mnesia_entries: Failed to get information").
 
-
-%%Shows all clients table:
-list_clents_table() ->
-    F = fun() ->
-		PortIp = mnesia:all_keys(clients),
-		lists:foldl(fun(Elem, Acc) ->
-					Acc ++ mnesia:read(clients, Elem)
-                            end,
-			    [],
-			    PortIp)
-    end,
-    Result = mnesia:transaction(F),
-    case Result of
-        {aborted, Reason} ->
-            error_logger:error_msg("list_servers: Immpossible to "
-				  "get distributed servers due to ~p~n",[Reason]);
-        {atomic, Servers} ->
-            Servers
-    end.
-	

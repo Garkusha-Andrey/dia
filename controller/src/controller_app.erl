@@ -234,7 +234,7 @@ read_lines(Device, L) ->
 %% and distribute the diameter instances per server.
 %% ====================================================================
 clodify_done() ->
-    case controller_lib:check_mnnesia_entries(servers) of
+    case controller_lib:check_mnesia_entries(servers) of
 	'$end_of_table' ->
 		error_logger:info_msg("Parse service_config is started!~n"),
 		parse_service_config("../src/service_config"),
