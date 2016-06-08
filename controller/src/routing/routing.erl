@@ -195,38 +195,32 @@ exception_for_connection(Connection, Instances) ->
 %% @description
 %%     for all the instances in the @InstanceList:
 %%      update weight according to @Weights
-%%        if instance is not in @Weights, set weight to 0;
-%%      calculate the total (sum) weight
+%%        if instance is not in @Weights, set weight to 0
 %%
-update_weights(InstanceList, Weights) ->
+update_weights(Instances, Weights) ->
 
     %% reset all weights
-    InstanceList2 = lists:map(fun(Instance) ->
+    Instances2 = lists:map(fun(Instance) ->
                    #instanceChunks{
                      id=Instance#instanceChunks.id,
                      weight=0,
                      chunks=Instance#instanceChunks.chunks,
                      chunks_n=Instance#instanceChunks.chunks_n,
                      chunks_diff=Instance#instanceChunks.chunks_diff}
-                           end, InstanceList),
+                           end, Instances),
 
-    %%iterate through weights and update instances
-    int_update_weights(InstanceList2, Weights, [], 0).
-
-int_update_weights(OldInstanceList, [Weight | RWeights],
-                 NewInstanceList, PrevTotalWeight) ->
+Update_weight = fun (Weight, {InstanceList, TotalWeight}) ->
     CompareFunc = fun(Instance) ->
                 Instance#instanceChunks.id == Weight#instanceWeight.nodeId
                   end,
 
-    TotalWeight = PrevTotalWeight + Weight#instanceWeight.weight,
-
-    case lists:filter(CompareFunc, OldInstanceList) of
+    case lists:filter(CompareFunc, InstanceList) of
         [] ->
             %% no such ID in the old instance list (new instance booted) - add
-            ExistingInstance = null,
             NewInstance = #instanceChunks{id=Weight#instanceWeight.nodeId,
-                                          weight=Weight#instanceWeight.weight};
+                                          weight=Weight#instanceWeight.weight},
+            {[NewInstance|InstanceList],
+	     TotalWeight + Weight#instanceWeight.weight};
 
         [ExistingInstance] ->
             %% such ID already in the old instance list, just update weight
@@ -235,44 +229,41 @@ int_update_weights(OldInstanceList, [Weight | RWeights],
               weight=Weight#instanceWeight.weight,
               chunks=ExistingInstance#instanceChunks.chunks,
               chunks_n=ExistingInstance#instanceChunks.chunks_n,
-              chunks_diff=ExistingInstance#instanceChunks.chunks_diff}
-    end,
-
-    case ExistingInstance of
-        null ->
-            int_update_weights(OldInstanceList, RWeights,
-                                 [NewInstance|NewInstanceList], TotalWeight);
-        _ ->
-            %% the instance that we copied to new instance list,
+              chunks_diff=ExistingInstance#instanceChunks.chunks_diff},
+	    %% the instance that we copied to new instance list,
             %%  has to be removed from the old instance list
-            int_update_weights(lists:delete(ExistingInstance,
-                                              OldInstanceList),
-                                 RWeights,
-                                 [NewInstance|NewInstanceList], TotalWeight)
-    end;
+            {[NewInstance|lists:delete(ExistingInstance,
+				       InstanceList)],
+	     TotalWeight + Weight#instanceWeight.weight}
+    end
+end,
 
-%% now we have iterated through all weights and
-%%  at this point, NewInstanceList contains:
-%%   - remaining instances (weights updated)
-%%   - new instances (booted)
-%%  DeletedInstances contains the instances which do not exist anymore
-%%   their weights are 0 and we merge them into the resulting instance list
-%%   to be able to take chunks from them
-%%
-%%  normalize weights so they make 1 in total
-%%   (unless all instances are deleted and TotalWeight is 0)
-int_update_weights(DeletedInstances, [], [], 0) ->
-    DeletedInstances;
+    %%iterate through weights and update instances
+    {InstanceListNew, TotalWeight} =
+         lists:foldl(Update_weight, {Instances2, 0}, Weights),
 
-int_update_weights(DeletedInstances, [], NewInstanceList, TotalWeight) ->
-    lists:map(fun(Instance) ->
-                      #instanceChunks{
-                   id=Instance#instanceChunks.id,
-                   weight=Instance#instanceChunks.weight / TotalWeight,
-                   chunks=Instance#instanceChunks.chunks,
-                   chunks_n=Instance#instanceChunks.chunks_n,
-                   chunks_diff=Instance#instanceChunks.chunks_diff}
-              end, DeletedInstances ++ lists:reverse(NewInstanceList)).
+    %% now we have iterated through all weights and
+    %%  at this point, InstanceListNew contains:
+    %%   - updated instances (weights updated)
+    %%   - new instances (booted)
+    %%   - obsolete instances (weights set to 0, still need those to take
+    %%       chunks
+    %%
+    %%  normalize weights so they make 1 in total
+    %%   (unless all instances are obsolete and TotalWeight is 0)
+    case TotalWeight of
+	0 ->
+	    InstanceListNew;
+	_ ->
+	    lists:map(fun(Instance) ->
+			      #instanceChunks{
+			   id=Instance#instanceChunks.id,
+			   weight=Instance#instanceChunks.weight / TotalWeight,
+			   chunks=Instance#instanceChunks.chunks,
+			   chunks_n=Instance#instanceChunks.chunks_n,
+			   chunks_diff=Instance#instanceChunks.chunks_diff}
+		      end, InstanceListNew)
+    end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
