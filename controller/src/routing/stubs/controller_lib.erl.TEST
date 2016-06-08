@@ -1,0 +1,74 @@
+-module(controller_lib).
+
+-include("../../controller_app.hrl").
+
+-export([list_instance_weights/0,
+	 list_connections/0,
+	 get_instance_mac/1,
+	 get_ovsIp/0,
+	 get_ovsMac/0,
+	 get_extGwMac/0,
+	 get_publicIp/0]).
+
+list_instance_weights() ->
+    case ets:info(t_static) of
+	undefined ->
+	    ets:new(t_static, [set, named_table,public]),
+	    Iteration = 1;
+	_ ->
+	    [{iteration, Iteration}] = ets:lookup(t_static, iteration)
+    end,
+
+    ets:insert(t_static, {iteration, Iteration+1}),
+
+    Res = 
+    case Iteration of
+	1 ->
+%% empty instance list with no previous instances
+	    [];
+	2 ->
+%% 3 even instances with 8/3 = 2,66 chunks each
+	    [#instanceWeight{nodeId=1, weight=95},
+	     #instanceWeight{nodeId=2, weight=100},
+	     #instanceWeight{nodeId=3, weight=100}];
+	3 ->
+%% empty instance list with previous instances
+	    [];
+	4 ->
+%% 6 even instances with 8/6 = 1,33 chunks each
+	    [#instanceWeight{nodeId=1, weight=100},
+	     #instanceWeight{nodeId=2, weight=95},
+	     #instanceWeight{nodeId=3, weight=100},
+	     #instanceWeight{nodeId=4, weight=100},
+	     #instanceWeight{nodeId=5, weight=100},
+	     #instanceWeight{nodeId=6, weight=100}];
+	5 ->
+	    [#instanceWeight{nodeId=2, weight=80},
+	     #instanceWeight{nodeId=3, weight=20}];
+	_ ->
+	    exit(ok)
+    end,
+
+    rlog:log("Weights: ~p~n", [Res]),
+    Res.
+
+list_connections() ->
+    [#clients{nodeId=2,
+	      portIpAddr={1, "10.0.0.2"}},
+     #clients{nodeId=2,
+	      portIpAddr={2, "10.0.0.4"}},
+     #clients{nodeId=1,
+	      portIpAddr={3, "10.0.0.6"}}
+     ].
+
+get_instance_mac(InstanceId) ->
+    lists:flatten(lists:duplicate(5,"0" ++ integer_to_list(InstanceId) ++ ":"))
+       ++ "0" ++ integer_to_list(InstanceId).
+get_ovsIp()->
+    {"10.0.0.5","255.255.255.0"}.
+get_ovsMac()->
+    "01:02:03:04:05:06".
+get_extGwMac()->
+    "0a:0b:0c:0d:0e:0f".
+get_publicIp()->
+    {"192.168.203.203","255.255.254.0"}.

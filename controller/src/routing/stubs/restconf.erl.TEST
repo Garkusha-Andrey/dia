@@ -1,0 +1,14 @@
+-module(restconf).
+
+-export([flow_send/1,
+         table_delete/1]).
+
+flow_send(noflow) ->
+    ok;
+flow_send({FlowId, Flow}) ->
+    flow_send({0, FlowId, Flow});
+flow_send({_TableId, _FlowId, _Flow}) ->
+    ok.
+
+table_delete(_) ->
+    ok.

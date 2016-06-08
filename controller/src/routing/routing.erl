@@ -1,9 +1,6 @@
 -module(routing).
 
--export([init/0, update/0
-        %% for test
-        %% ,test_update/1
-	]).
+-export([init/0, update/0]).
 
 -include("../controller_app.hrl").
 
@@ -62,19 +59,16 @@ init()->
 	    tryagain
     end.
 
-update(nobasic)->
-    test_update(2).
 update()->
     send_basic_flows(),
-    test_update(2).
-test_update(_Iteration)->
+    update(nobasic).
+update(nobasic)->
 
     %% LOAD
     [{instances, Instances}] = ets:lookup(table, instances),
     [{freeChunks, FreeChunks}] = ets:lookup(table, freeChunks),
 
 
-    %% Weights = dia_stubs:instance_weights_get(Iteration),
     Weights = controller_lib:list_instance_weights(),
 
     %% set the new weights
