@@ -133,7 +133,6 @@ start(normal, []) ->
     Nodes = [node()| nodes()],
     install(Nodes),
     wait_for_tables(),
-    controller_lib:initialize_routing(20),
     controller_sub:start_link();
 start({takeover, OtherNode}, []) ->
     error_logger:info_msg("Erlang controller application takeover for "
