@@ -507,6 +507,9 @@ get_not_distributed_servers() ->
 check_distr([], []) ->
     error_logger:info_msg("Check distribution is comlete~n"),
     ok;
+check_distr([],_) ->
+    error_logger:info_msg("An initial distribution! Check is not needed!"~n),
+    ok;
 check_distr([BServer | BServers], [AServer | AServers]) ->
     error_logger:info_msg("check_distribution: "
 			 "BServers ~p; AServers ~p~n",[BServers, AServers]),
