@@ -607,6 +607,11 @@ transition({diameter, {close, Pid}}, #transport{parent = Pid,
                                                 socket = Sock,
                                                 module = M}) ->
     M:close(Sock),
+
+	{RAddr, RPort} = ok(peername(M, Sock)),
+    error_logger:info_msg("[agarkush] diameter_tcp:: close the transport connection: ~n"
+              "Raddr: ~p RPort ~p~n", [RAddr, RPort]),
+	controller_lib:delete_client_port_ipaddr(RPort, inet_parse:ntoa(RAddr)),
     stop;
 
 %% Timeout for reception of outstanding packets.

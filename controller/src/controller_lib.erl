@@ -45,14 +45,15 @@
         ]).
 
 %% API for diameter
--export([%% servers Table
-	 store_procId/2,
-	 store_server_procId/3,
-	 get_connection_by_realm/2,
- 
-	 %% clients Table
-	 store_client_port_ipadd/3,
-         delete_client_port_ipaddr/2]).
+-export([
+    %% servers Table
+    store_procId/2,
+    store_server_procId/3,
+    get_connection_by_realm/2,
+
+    %% clients Table
+    store_client_port_ipadd/3,
+    delete_client_port_ipaddr/2]).
 
 -include("controller_app.hrl").
 
