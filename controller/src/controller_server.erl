@@ -441,11 +441,8 @@ store_nodeId(Server, NodeId) ->
     case Result of
 	{aborted, Reason} ->
 	    error_logger:error_msg("store_nodeId:  Immpossible to"
-                                   " store Server ~p per Node ~p due to ~p~n",[Server, NodeId, Reason]);
+                               " store Server ~p per Node ~p due to ~p~n",[Server, NodeId, Reason]);
 	{atomic, Table} ->
-	    %% Workaround for diameter instead of mnesia listener
-            %% Send Server parameters to node to connect to the server
-            {?RELAY_MGR, NodeId} ! {add_server, Server},
 	    Table
     end.
 
@@ -606,7 +603,11 @@ check_distribution(BServers, AServers) ->
 																	[R] = mnesia:wread({servers, AKey}),
 																	mnesia:write(R#servers{processId = undefined})
 															end,
-														mnesia:transaction(F);
+														mnesia:transaction(F),
+														%% Workaround for diameter instead of mnesia listener
+											            %% Send Server parameters to node to connect to the server
+														error_logger:info_msg("send add_server to ~p ~p ~n",[ANode,AServer]),
+            											{?RELAY_MGR, ANode} ! {add_server, AServer};
 													_ ->
 														do_nothing
 												end
@@ -628,7 +629,11 @@ check_distribution(BServers, AServers) ->
 																	[R] = mnesia:wread({servers, AKey}),
 																	mnesia:write(R#servers{processId = undefined})
 															end,
-														mnesia:transaction(F);
+														mnesia:transaction(F),
+														%% Workaround for diameter instead of mnesia listener
+											            %% Send Server parameters to node to connect to the server
+														error_logger:info_msg("send add_server to ~p ~p ~n",[ANode,AServer]),
+            											{?RELAY_MGR, ANode} ! {add_server, AServer};
 													_ ->
 														do_nothing
 												end
