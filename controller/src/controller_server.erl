@@ -504,8 +504,14 @@ get_not_distributed_servers() ->
 check_distr([], []) ->
     error_logger:info_msg("Check distribution is comlete~n"),
     ok;
-check_distr([],_) ->
-    error_logger:info_msg("An initial distribution! Check is not needed!~n"),
+check_distr([],AServers) ->
+    error_logger:info_msg("An initial distribution! Check is not needed!"
+                          " Send add_server for all DIA nodes!~n"),
+    lists:foreach(fun(Server) ->
+                                  Node = Server#servers.nodeId,
+                                  {?RELAY_MGR, Node} ! {add_server, Server}
+                  end,
+                  AServers),
     ok;
 check_distr([BServer | BServers], [AServer | AServers]) ->
     error_logger:info_msg("check_distribution: "
@@ -542,7 +548,13 @@ check_distr([BServer | BServers], [AServer | AServers]) ->
 										[R] = mnesia:wread({servers, AKey}),
 										mnesia:write(R#servers{processId = undefined})
 									end,
-								mnesia:transaction(F);
+								mnesia:transaction(F),
+                                                                %% Workaround for diameter instead of mnesia listener
+                                                                %% Send Server parameters to node to connect to the server
+                                                                error_logger:info_msg("send add_server to ~p ~p in case when "
+                                                                                      "port and IP are equals, but nodes are different!~n",
+                                                                                      [ANode,AServer]),
+                                                                {?RELAY_MGR, ANode} ! {add_server, AServer};
 							_ ->
 								do_nothing
 						end
@@ -559,7 +571,11 @@ check_distr([BServer | BServers], [AServer | AServers]) ->
 							[R] = mnesia:wread({servers, AKey}),
 							mnesia:write(R#servers{processId = undefined})
 						end,
-						mnesia:transaction(F);
+						mnesia:transaction(F),
+                                                %% Workaround for diameter instead of mnesia listener
+                                                %% Send Server parameters to node to connect to the server
+                                                error_logger:info_msg("send add_server to ~p ~p ~n",[ANode,AServer]),
+                                                {?RELAY_MGR, ANode} ! {add_server, AServer};
 					_ ->
 						do_nothing
 				end
