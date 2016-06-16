@@ -21,10 +21,6 @@
 -define(REALM_ID, 'nfv.ru').
 
 start(T) ->
-	
-	{ok, Log} = file:open(?LOG_FILE, [append]),
-	erlang:group_leader(Log, self()),
-
     error_logger:info_msg("Just test string ~n"),
 	
 	SwitchIP = case inet_parse:address(atom_to_list(lists:nth(1, T))) of

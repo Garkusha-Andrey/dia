@@ -31,8 +31,9 @@
 %% Callback implementation
 %% ====================================================================
 
-peer_up(_SvcName, Peer, State) ->
-	error_logger:info_msg("irelay_cb::peer_up ~p connected to client ~p: ~n", [node(), Peer]),
+peer_up(_SvcName, {_,Caps}, State) ->
+	error_logger:info_msg("irelay_cb::peer_up ~p connected to client ~p ~w ~n"
+						 , [node(), Caps#diameter_caps.origin_host, Caps#diameter_caps.host_ip_address]),
     State.
 
 peer_down(_SvcName, _Peer, State) ->

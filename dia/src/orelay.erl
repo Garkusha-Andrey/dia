@@ -56,8 +56,7 @@ init() ->
 %% deploy/1 ([<Name>, <Ralm>, <local IP>, <remote IP>, <Port>])
 %% deploy([c1, 'ex.ru', {127,0,0,1}, {127,0,0,1}, 3911]).
 deploy(T) ->
-	{ok, Log} = file:open("orelay.log", [append]),
-	erlang:group_leader(Log, self()),
+	error_logger:info_msg("orelay: Deploy ~p ~n", [T]),
 
 	Name = lists:nth(1, T),
 	Realm = lists:nth(2, T),

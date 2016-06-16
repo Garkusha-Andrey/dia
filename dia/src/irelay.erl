@@ -43,8 +43,7 @@ init(NodeName) ->
 %% irelay:deploy(['ir1','ex.ru','127.0.0.1','3911']). - from Erlang mashine
 %% erl -s irelay deploy 'ir1' 'ex.com' "127.0.0.1" 3911 - from bash
 deploy(T) ->
-	{ok, Log} = file:open("irelay.log", [append]),
-	erlang:group_leader(Log, self()),
+    error_logger:info_msg("irelay: Deploy ~p ~n", [T]),
 	
     Name  = lists:nth(1, T),
 	Realm = lists:nth(2, T),
